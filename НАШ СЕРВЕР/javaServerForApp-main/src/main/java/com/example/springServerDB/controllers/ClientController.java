@@ -1,7 +1,7 @@
-package com.example.induswithpostgresql.controllers;
+package com.example.springServerDB.controllers;
 
-import com.example.induswithpostgresql.model.clients.Client;
-import com.example.induswithpostgresql.model.clients.ClientService;
+import com.example.springServerDB.model.clients.Client;
+import com.example.springServerDB.model.clients.ClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

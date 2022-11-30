@@ -1,4 +1,4 @@
-package com.example.induswithpostgresql.model.clients;
+package com.example.springServerDB.model.clients;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Streamable;

@@ -1,4 +1,4 @@
-package com.example.induswithpostgresql.model.clients;
+package com.example.springServerDB.model.clients;
 
 import jakarta.persistence.*;
 
