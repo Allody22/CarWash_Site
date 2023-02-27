@@ -37,7 +37,6 @@ public class User {
 	@Size(max = 20)
 	private String phone;
 
-	@NotBlank
 	@Size(max = 50)
 	@Email
 	private String email;
@@ -53,6 +52,12 @@ public class User {
 	private Set<Role> roles = new HashSet<>();
 
 	public User() {
+	}
+
+	public User(String username, String password) {
+		this.username = username;
+		this.password = password;
+		setPhone(username);
 	}
 
 	public User(String username, String email, String password) {

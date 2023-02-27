@@ -10,7 +10,7 @@ import javax.persistence.OneToOne;
 
 import java.time.Instant;
 
-@Entity(name = "refreshtoken")
+@Entity(name = "refreshToken")
 public class RefreshToken {
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
