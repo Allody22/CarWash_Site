@@ -1,18 +1,42 @@
 package ru.nsu.carwash_server.payload.request;
 
-import ru.nsu.carwash_server.models.Orders;
-import ru.nsu.carwash_server.models.User;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotNull;
+import java.util.Date;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class BookingOrderRequest {
-    private User user;
 
-    private Orders order;
+    private String mainOrder;
 
-    public User getUser() {
-        return user;
-    }
+    private List<String> extraOrders;
 
-    public Orders getOrder() {
-        return order;
-    }
+    @NotNull
+    private Date startTime;
+
+    private String administrator;
+
+    private String specialist;
+
+    private Long autoId;
+
+    private int boxNumber;
+
+    private int bonuses;
+
+    private String comments;
+
+    private String autoNumber;
+
+    private int autoType;
+
+    private boolean executed;
 }

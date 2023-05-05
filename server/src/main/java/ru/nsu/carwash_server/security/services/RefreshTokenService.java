@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.nsu.carwash_server.exception.TokenRefreshException;
+import ru.nsu.carwash_server.models.exception.TokenRefreshException;
 import ru.nsu.carwash_server.models.RefreshToken;
 import ru.nsu.carwash_server.repository.RefreshTokenRepository;
 import ru.nsu.carwash_server.repository.UserRepository;
@@ -16,14 +16,19 @@ import java.util.UUID;
 
 @Service
 public class RefreshTokenService {
-  @Value("${bezkoder.app.jwtRefreshExpirationMs}")
+  @Value("${carwash.app.jwtRefreshExpirationMs}")
   private Long refreshTokenDurationMs;
 
-  @Autowired
-  private RefreshTokenRepository refreshTokenRepository;
+  private final RefreshTokenRepository refreshTokenRepository;
+
+  private final UserRepository userRepository;
 
   @Autowired
-  private UserRepository userRepository;
+  public RefreshTokenService(RefreshTokenRepository refreshTokenRepository,
+                             UserRepository userRepository) {
+    this.refreshTokenRepository = refreshTokenRepository;
+    this.userRepository = userRepository;
+  }
 
   public Optional<RefreshToken> findByToken(String token) {
     return refreshTokenRepository.findByToken(token);

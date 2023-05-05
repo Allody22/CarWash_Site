@@ -1,7 +1,14 @@
 package ru.nsu.carwash_server.models;
 
 
-import javax.persistence.Column;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import ru.nsu.carwash_server.models.constants.ERole;
+
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -12,36 +19,21 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "roles")
+@NoArgsConstructor
+@ToString
+@Getter @Setter
+@AllArgsConstructor
 public class Role {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer id;
 
-	@Enumerated(EnumType.STRING)
-	@Column(length = 20)
-	private ERole name;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonIgnore
+    private Integer id;
 
-	public Role() {
+    @Enumerated(EnumType.STRING)
+    private ERole name;
 
-	}
-
-	public Role(ERole name) {
-		this.name = name;
-	}
-
-	public Integer getId() {
-		return id;
-	}
-
-	public void setId(Integer id) {
-		this.id = id;
-	}
-
-	public ERole getName() {
-		return name;
-	}
-
-	public void setName(ERole name) {
-		this.name = name;
-	}
+    public Role(ERole name) {
+        this.name = name;
+    }
 }
