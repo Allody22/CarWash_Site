@@ -32,7 +32,7 @@ export const signOut = async () => {
     const config = {
         headers: { Authorization: `Bearer ${accessToken}` }
     };
-    await $host.post('api/auth/signout', null, config); // передаем null вместо refreshToken
+    await $host.post('api/auth/signout', localStorage.getItem('refreshToken'), config); // передаем null вместо refreshToken
     localStorage.clear();
 }
 

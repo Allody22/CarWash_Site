@@ -23,6 +23,7 @@ const Auth = observer(() => {
             user.setIsAuth(true)
             history.push(ADMIN_ROUTE)
         } catch (error) {
+            console.log(error)
             alert('Произошла ошибка. Пожалуйста, повторите попытку позже.');
         }
     };
