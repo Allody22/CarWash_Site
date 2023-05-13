@@ -1,6 +1,6 @@
 import React from 'react';
 import {Button,Container} from "react-bootstrap";
-import {CREATE_ORDER_ROUTE} from "../utils/consts";
+import {CHANGEUSERINFO_ROUTE, CREATE_ORDER_ROUTE} from "../utils/consts";
 import {useHistory} from "react-router-dom";
 //import '../css/App.css';
 
@@ -26,7 +26,7 @@ const Admin = () => {
             <Button
                 variant={"outline-dark"}
                 className="mt-4 p-2"
-                onClick={() => history.push(CREATE_ORDER_ROUTE)}
+                onClick={() => history.push(CHANGEUSERINFO_ROUTE)}
             >
                 Изменить информацию о человеке
             </Button>

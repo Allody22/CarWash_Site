@@ -1,0 +1,25 @@
+.MyTable {
+    display: block;
+    margin: 0 auto;
+    width: 95%;
+    border: 1px solid black;
+    overflow-x: auto;
+    table-layout: fixed; /* фиксированная ширина колонок */
+}
+
+.MyTable th {
+    background-color: #4CAF50;
+    font-size: 14px;
+    color: white;
+}
+
+
+
+.MyTable th,
+.MyTable td {
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    padding: 7px 10px;
+    text-align: left;
+    border: 1px solid gray;
+}

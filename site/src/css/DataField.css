@@ -1,0 +1,30 @@
+.date-field {
+    display: flex; /* задаем display: flex для flexbox layout'а */
+    justify-content: center; /* центруем блок по горизонтали */
+    align-items: center; /* центруем блок по вертикали */
+    width: 500px; /* устанавливаем максимальную ширину контейнера */
+    /* добавляет правый отступ между полями ввода */
+    /* добавляет нижний отступ между полями ввода */
+    margin: 0 auto 1rem;
+}
+
+.time-field {
+    display: flex; /* задаем display: flex для flexbox layout'а */
+    justify-content: center; /* центруем блок по горизонтали */
+    align-items: center; /* центруем блок по вертикали */
+    width: 500px; /* устанавливаем максимальную ширину контейнера */
+    /* добавляет правый отступ между полями ввода */
+    /* добавляет нижний отступ между полями ввода */
+    margin: 0 auto 1rem;
+}
+
+.form-row-separated {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}

@@ -1,8 +1,9 @@
 import Admin from "./pages/Admin";
-import {ADMIN_ROUTE, CREATE_ORDER_ROUTE, LOGIN_ROUTE, ORDERSTABLE_ROUTE} from "./utils/consts";
+import {ADMIN_ROUTE, CHANGEUSERINFO_ROUTE, CREATE_ORDER_ROUTE, LOGIN_ROUTE, ORDERSTABLE_ROUTE} from "./utils/consts";
 import Auth from "./pages/Auth";
 import CreatingOrder from "./pages/CreateOrder";
 import OrderTable from "./pages/OrdersTable";
+import ChangeUserInfo from "./pages/ChangeUserInfo";
 
 
 export const authRoutes = [
@@ -17,6 +18,10 @@ export const authRoutes = [
     {
         path: ORDERSTABLE_ROUTE,
         Component: OrderTable
+    },
+    {
+        path:CHANGEUSERINFO_ROUTE,
+        Component: ChangeUserInfo
     }
 ]
 
