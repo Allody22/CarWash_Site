@@ -2,7 +2,11 @@ import React, {useContext} from 'react';
 import {Context} from "../index";
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
-import {ADMIN_ROUTE, CHANGEUSERINFO_ROUTE, CREATE_ORDER_ROUTE, LOGIN_ROUTE, ORDERSTABLE_ROUTE} from "../utils/consts";
+import {
+    ADMIN_ROUTE,
+    CHANGE_USERINFO_ROUTE,
+    LOGIN_ROUTE, ORDERS_TABLE_ROUTE
+} from "../utils/consts";
 import {Button} from "react-bootstrap";
 import {observer} from "mobx-react-lite";
 import Container from "react-bootstrap/Container";
@@ -35,21 +39,14 @@ const NavBar = observer(() => {
 
                         <Button
                             variant={"outline-light"}
-                            onClick={() => history.push(CREATE_ORDER_ROUTE)}
-                        >
-                            Добавление заказа
-                        </Button>
-
-                        <Button
-                            variant={"outline-light"}
-                            onClick={() => history.push(CHANGEUSERINFO_ROUTE)}
+                            onClick={() => history.push(CHANGE_USERINFO_ROUTE)}
                         >
                             Изменение инфы о человеке
                         </Button>
 
                         <Button
                             variant={"outline-light"}
-                            onClick={() => history.push(ORDERSTABLE_ROUTE)}
+                            onClick={() => history.push(ORDERS_TABLE_ROUTE)}
                         >
                             Таблица заказов
                         </Button>

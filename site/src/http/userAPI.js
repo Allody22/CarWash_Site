@@ -20,42 +20,14 @@ export const refreshAccessToken = async () => {
 }
 
 export const signOut = async () => {
-    const accessToken = localStorage.getItem('token');
-    const config = {
-        headers: {Authorization: `Bearer ${accessToken}`}
-    };
-    await $host.post('api/auth/signout', localStorage.getItem('refreshToken'), config); // передаем null вместо refreshToken
+    await $authHost.post('api/auth/signout');
     localStorage.clear();
 }
 
 export const check = async () => {
-    const accessToken = localStorage.getItem('token');
-    console.log(accessToken)
-     const config = {
-         headers: { Authorization: `Bearer ${accessToken}` }
-     };
-    await $authHost.get('api/test/all',config)
+    await $authHost.get('api/admin/adminRoleCheck');
 }
 
-export const getTableOrders = async (startTime, endTime) => {
-    const {data: {orders}} = await $host.post('api/orders/getBookedTimeInOneDay', {startTime, endTime});
-    return orders;
-};
-
 export const updateUserInfo = async (email, username, fullName, roles) => {
-
-    const accessToken = localStorage.getItem('token');
-    const config = {
-        headers: { Authorization: `Bearer ${accessToken}` }
-    };
-    return await $host.put('api/admin/updateUserInfo', {email, username, fullName, roles},config);
-};
-
-
-export const getPrice = async (ordersRu, bodyType) => {
-    const requestBody = {
-        ordersRu: ordersRu,
-        bodyType: bodyType,
-    };
-    return await $host.post('api/orders/getPriceAndTime', requestBody);
+    return await $authHost.put('api/admin/updateUserInfo', {email, username, fullName, roles});
 };

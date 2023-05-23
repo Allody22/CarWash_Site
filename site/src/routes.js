@@ -1,9 +1,17 @@
 import Admin from "./pages/Admin";
-import {ADMIN_ROUTE, CHANGEUSERINFO_ROUTE, CREATE_ORDER_ROUTE, LOGIN_ROUTE, ORDERSTABLE_ROUTE} from "./utils/consts";
+import {
+    ADMIN_ROUTE, CHANGE_USERINFO_ROUTE,
+    CREATE_POLISHING_ORDER_ROUTE, CREATE_TIRE_ORDER_ROUTE,
+    CREATE_WASHING_ORDER_ROUTE,
+    LOGIN_ROUTE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE,
+} from "./utils/consts";
 import Auth from "./pages/Auth";
-import CreatingOrder from "./pages/CreateOrder";
 import OrderTable from "./pages/OrdersTable";
 import ChangeUserInfo from "./pages/ChangeUserInfo";
+import CreatingWashingOrder from "./pages/CreateWashingOrder";
+import CreatingPolishingOrder from "./pages/CreatePolishingOrder";
+import CreatingTireOrder from "./pages/CreateTireOrder";
+import UpdateOrderInfo from "./pages/UpdateOrderInfo";
 
 
 export const authRoutes = [
@@ -12,16 +20,28 @@ export const authRoutes = [
         Component: Admin
     },
     {
-        path: CREATE_ORDER_ROUTE,
-        Component: CreatingOrder
+        path: CREATE_WASHING_ORDER_ROUTE,
+        Component: CreatingWashingOrder
     },
     {
-        path: ORDERSTABLE_ROUTE,
+        path: CREATE_POLISHING_ORDER_ROUTE,
+        Component: CreatingPolishingOrder
+    },
+    {
+        path: CREATE_TIRE_ORDER_ROUTE,
+        Component: CreatingTireOrder
+    },
+    {
+        path: ORDERS_TABLE_ROUTE,
         Component: OrderTable
     },
     {
-        path:CHANGEUSERINFO_ROUTE,
+        path:CHANGE_USERINFO_ROUTE,
         Component: ChangeUserInfo
+    },
+    {
+        path:UPDATE_ORDER_INFO_ROUTE,
+        Component: UpdateOrderInfo
     }
 ]
 

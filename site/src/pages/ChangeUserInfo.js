@@ -4,7 +4,7 @@ import React, {useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import Modal from "react-bootstrap/Modal";
-import InputField from "../components/InputField";
+import InputField from "../model/InputField";
 import {ADMIN_ROUTE} from "../utils/consts";
 import {useHistory} from "react-router-dom";
 

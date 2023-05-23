@@ -3,39 +3,45 @@ import '../css/MyTable.css';
 import '../css/DatePicker.css';
 import {useTable} from 'react-table';
 import {parseISO, format} from 'date-fns';
-import {getTableOrders} from "../http/userAPI";
-import OrderNameMap from "../components/OrderNameMap";
+import {getTableOrders} from "../http/orderAPI";
+import orderTypeMap from "../model/OrderTypeMap";
 
 
 const columns = [
-
+    {
+        Header: 'Айди',
+        accessor: 'id',
+    },
     {
         Header: 'Дата и время начала',
         accessor: 'startTime',
-        Cell: ({value}) => format(parseISO(value), 'dd.MM.yyyy HH:mm:ss'),
+        Cell: ({value}) => value ? format(parseISO(value), 'dd.MM.yyyy HH:mm:ss') : 'Неизвестно'
     },
     {
         Header: 'Дата и время конца',
         accessor: 'endTime',
-        Cell: ({value}) => format(parseISO(value), 'dd.MM.yyyy HH:mm:ss'),
+        Cell: ({value}) => value ? format(parseISO(value), 'dd.MM.yyyy HH:mm:ss') : 'Неизвестно'
+    },
+    {
+        Header: 'Тип заказа',
+        accessor: 'orderType',
+        Cell: ({value}) => value ? orderTypeMap[value] || value : "Неизвестно"
     },
     {
         Header: 'Взятые услуги',
-        accessor: 'ordersAdditional',
-        Cell: ({value}) =>
-            value
-                .map((service) => OrderNameMap[service.name])
-                .filter((serviceName) => !!serviceName)
-                .join(', '),
+        accessor: 'orders',
+        Cell: ({value}) => {
+            return value.join(', ');
+        }
     },
     {Header: 'Номер авто', accessor: 'autoNumber'},
     {Header: 'Тип кузова', accessor: 'autoType'},
     {Header: 'Администратор', accessor: 'administrator'},
     {Header: 'Специалист', accessor: 'specialist'},
-    {Header: 'Номер бокса', accessor: 'boxNumber'},
-    {Header: 'Использованные бонусы', accessor: 'bonuses'},
+    {Header: 'Бокс', accessor: 'boxNumber'},
+    {Header: 'Бонусы', accessor: 'bonuses'},
     {Header: 'Комментарии клиента', accessor: 'comments'},
-    {Header: 'Общая цена', accessor: 'price'}
+    {Header: 'Цена', accessor: 'price'}
 ];
 
 const OrderTable = () => {
@@ -49,7 +55,6 @@ const OrderTable = () => {
 
     const handleFormSubmit = async (event) => {
         event.preventDefault();
-        console.log('Selected time interval:', start, end);
         setLoading(true);
         try {
             const response = await getTableOrders(start.toISOString(), end.toISOString());

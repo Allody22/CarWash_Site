@@ -1,8 +1,8 @@
 import '../css/CreatingOrder.css';
 
-const InputField = ({ label, id, value, onChange }) => {
+const InputField = ({ label, id, value, onChange,style }) => {
   return (
-    <div className='input-container'>
+    <div className='input-container' style={style} >
       <label htmlFor={id}>{label}</label>
       <input
         type='text'
