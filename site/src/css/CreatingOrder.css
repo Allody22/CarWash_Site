@@ -6,6 +6,14 @@
     margin: 1rem auto;
 }
 
+.custom-modal-dialog {
+    max-width: 40%;
+}
+
+.custom-modal-dialog-polishing {
+    max-width: 60%;
+}
+
 .btn-submit {
     display: block;
     width: 75%;
@@ -26,6 +34,10 @@
     border-radius: 20px;
     margin-right: 7px;
     margin-bottom: 7px;
+}
+
+.input-container input[type="text"]:placeholder-shown {
+    opacity: 0.5;
 }
 
 .my-custom-class .modal-content {
@@ -66,35 +78,6 @@
 
 .checked .checkmark {
     background-color: #17A2B8;
-}
-
-/*
-Это галочки внутри
- */
-.checkmark {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    position: relative;
-    border: 1px solid #6c757d;
-    border-radius: 5px;
-    margin-right: 0.5rem;
-}
-
-.checkmark:after {
-    content: "";
-    position: absolute;
-    display: none;
-}
-
-.checkmark:after {
-    left: 6px;
-    top: 2px;
-    width: 4px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
 }
 
 /*
@@ -147,5 +130,4 @@
     white-space: nowrap;
     overflow: hidden;
     max-width: 550px;
-    margin: 0 auto; /* центрируем блок по горизонтали */
 }

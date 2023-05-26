@@ -6,7 +6,9 @@ import {
     CREATE_WASHING_ORDER_ROUTE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE
 } from "../utils/consts";
 import {useHistory} from "react-router-dom";
+import {InputPicker} from "rsuite";
 //import '../css/App.css';
+
 
 const Admin = () => {
     const history = useHistory()

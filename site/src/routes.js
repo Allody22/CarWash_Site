@@ -8,9 +8,9 @@ import {
 import Auth from "./pages/Auth";
 import OrderTable from "./pages/OrdersTable";
 import ChangeUserInfo from "./pages/ChangeUserInfo";
-import CreatingWashingOrder from "./pages/CreateWashingOrder";
-import CreatingPolishingOrder from "./pages/CreatePolishingOrder";
-import CreatingTireOrder from "./pages/CreateTireOrder";
+import CreatingWashingOrder from "./pages/CreatingWashingOrder";
+import CreatingPolishingOrder from "./pages/CreatingPolishingOrder";
+import CreatingTireOrder from "./pages/CreatingTireOrder";
 import UpdateOrderInfo from "./pages/UpdateOrderInfo";
 
 

@@ -27,28 +27,16 @@ const NavBar = observer(() => {
     return (
         <Navbar bg="dark" variant="dark">
             <Container>
-                <NavLink style={{color:'white'}} to={ADMIN_ROUTE}>Путь админа</NavLink>
+                <NavLink style={{color:'white'}} to={ADMIN_ROUTE}>Главное меню</NavLink>
                 {user.isAuth ?
                     <Nav className="ml-auto" style={{color: 'orange'}}>
-                        <Button
-                            variant={"outline-light"}
-                            onClick={() => history.push(ADMIN_ROUTE)}
-                        >
-                            Админ панель
-                        </Button>
-
-                        <Button
-                            variant={"outline-light"}
-                            onClick={() => history.push(CHANGE_USERINFO_ROUTE)}
-                        >
-                            Изменение инфы о человеке
-                        </Button>
 
                         <Button
                             variant={"outline-light"}
                             onClick={() => history.push(ORDERS_TABLE_ROUTE)}
+                            style={{marginRight:'20px'}}
                         >
-                            Таблица заказов
+                            Таблица со всеми заказа
                         </Button>
 
 

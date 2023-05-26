@@ -1,122 +1,156 @@
 import '../css/CreatingOrder.css';
 import {updateUserInfo} from "../http/userAPI";
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
-import Modal from "react-bootstrap/Modal";
 import InputField from "../model/InputField";
-import {ADMIN_ROUTE} from "../utils/consts";
-import {useHistory} from "react-router-dom";
+import {TagPicker} from "rsuite";
+import {logDOM} from "@testing-library/react";
+
+
+const rolesArray = [
+    'Обычный пользователь',
+    'Администратор',
+    'Модератор',
+].map(item => ({label: item, value: item}));
+
+const inputStyle = {
+    fontWeight: 'bold', display: 'flex',
+    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
 
 const ChangeUserInfo = () => {
-    const history = useHistory()
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitTime, setSubmitTime] = useState(0);
     const [fullName, setFullName] = useState('');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
-    const [showModal, setShowModal] = useState(false);
-    const allItems = [ 'Администратор', 'Админ'];
     const [selectedRoles, setSelectedRoles] = useState([]);
-    const [enSelectedRoles, senEnSelectedRoles] = useState([]);
+    const [enSelectedRoles, setEnSelectedRoles] = useState([]);
 
 
-    const sendUpdateRequest = async () => {
+    const sendUpdateRequest = async (e) => {
+        e.preventDefault();
+        if (isSubmitting) {
+            return;
+        }
+        setIsSubmitting(true);
+        setSubmitTime(Date.now());
         try {
             const data = await updateUserInfo(email, username, fullName, enSelectedRoles);
             alert(data);
         } catch (error) {
-            console.log(email, username, fullName, enSelectedRoles)
-            console.log(error)
-            alert(error);
+            if (error.response) {
+                alert(error.response.data.message)
+            } else {
+                alert("Системная ошибка, попробуйте позже")
+            }
+        } finally {
+            setTimeout(() => setIsSubmitting(false), 4000);
         }
     };
 
-    const handleClick = item => {
-        let roleName = '';
-        if (item === 'Модератор') {
-            roleName = 'ROLE_MODERATOR';
-        } else if (item === 'Админ') {
-            roleName = 'ROLE_ADMIN';
-        } else if (item === 'Администратор') {
-            roleName = 'ROLE_ADMINISTRATOR'
-        } else if (item === 'Клиент') {
-            roleName = 'ROLE_USER';
-        } else {
-            roleName = 'ERROR'
+    useEffect(() => {
+        changeRolesToEnglish()
+        console.log(selectedRoles)
+    }, [selectedRoles]);
+    const changeRolesToEnglish = () => {
+        setEnSelectedRoles([]);
+        for (const item in selectedRoles) {
+            let roleName = '';
+            if (item === 'Модератор') {
+                roleName = 'ROLE_MODERATOR';
+            } else if (item === 'Админ') {
+                roleName = 'ROLE_ADMIN';
+            } else if (item === 'Администратор') {
+                roleName = 'ROLE_ADMINISTRATOR'
+            } else if (item === 'Обычный пользователь') {
+                roleName = 'ROLE_USER';
+            } else {
+                roleName = 'ERROR'
+            }
+            setEnSelectedRoles(...enSelectedRoles,roleName);
         }
-        if (selectedRoles.includes(item)) {
-            setSelectedRoles(selectedRoles.filter(i => i !== item));
-            senEnSelectedRoles(enSelectedRoles.filter(i => i !== roleName));
-        } else {
+        // console.log(enSelectedRoles)
+    };
+
+
+    // const changeRolesToEnglish = (item) => {
+    //     let roleName = '';
+    //     if (item === 'Модератор') {
+    //         roleName = 'ROLE_MODERATOR';
+    //     } else if (item === 'Админ') {
+    //         roleName = 'ROLE_ADMIN';
+    //     } else if (item === 'Администратор') {
+    //         roleName = 'ROLE_ADMINISTRATOR'
+    //     } else if (item === 'Клиент') {
+    //         roleName = 'ROLE_USER';
+    //     } else {
+    //         roleName = 'ERROR'
+    //     }
+    //     setEnSelectedRoles(...enSelectedRoles,roleName)
+    //     console.log(enSelectedRoles)
+    // };
+
+    const handleSelect = (value, item, event) => {
+        const index = selectedRoles.indexOf(item);
+        if (index === -1) {
             setSelectedRoles([...selectedRoles, item]);
-            senEnSelectedRoles([...enSelectedRoles, roleName]);
+        } else {
+            const updatedRoles = selectedRoles.filter((r) => r !== item);
+            setSelectedRoles(() => updatedRoles);
         }
     };
-
-    const handleOpenModal = () => setShowModal(true);
-    const handleCloseModal = () => setShowModal(false);
 
 
     return (
         <>
-            <Button className='full-width' variant='secondary'
-                    onClick={handleOpenModal}>
-                Выберите роли пользователя
-            </Button>
-            <Modal show={showModal} onHide={handleCloseModal} className='my-custom-class'>
-                <Modal.Header closeButton>
-                    <Modal.Title>Существующие роли</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {allItems.sort().map((item) => (
-                        <div
-                            key={item}
-                            onClick={() => handleClick(item)}
-                            className={'checkbox-custom ' + (selectedRoles.includes(item) ? 'checked' : '')}>
-                            <div className='checkmark'></div>
-                            <span className='text'>{item}</span>
-                        </div>
-                    ))}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant='secondary' onClick={handleCloseModal}>
-                        Закрыть
-                    </Button>
-                </Modal.Footer>
-            </Modal>
-            {selectedRoles.length > 0 && (
-                <div className='selected-items'>
-                    <Form.Label>Выбранные роли:</Form.Label>
-                    <div className='selected-items'>
-                        {selectedRoles.map((item) => (
-                            <span key={item} className='item'>
-          {item}
-        </span>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <p style={{...inputStyle, marginTop: '15px'}}>Выберите роли пользователя</p>
+            <p style={inputStyle}>От этого зависит, смогут ли они пользоваться приложением и сайтом</p>
+            <TagPicker data={rolesArray}
+                       block
+                       onSelect={handleSelect}
+                       style={{
+                           width: '500px',
+                           display: 'block',
+                           marginBottom: 10,
+                           marginLeft: 'auto',
+                           marginRight: 'auto',
+                           marginTop: 10,
+                           WebkitTextFillColor: "#000000"
+                       }}
+            />
+
             <Form onSubmit={sendUpdateRequest}>
                 <InputField
+                    inputStyle={inputStyle}
                     label='Номер телефона'
                     id='username'
                     value={username}
                     onChange={setUsername}
                 />
                 <InputField
-                    label='Имя и фамилия:'
+                    inputStyle={inputStyle}
+                    label='Имя и фамилия'
                     id='fullName'
                     value={fullName}
                     onChange={setFullName}
                 />
                 <InputField
+                    inputStyle={inputStyle}
                     label='Почта'
                     id='email'
                     value={email}
                     onChange={setEmail}
                 />
                 <div className='submit-container'>
-                    <Button className='btn-submit' variant='primary' type='submit'>
-                        Изменить информацию
+                    <Button
+                        className='btn-submit'
+                        variant='primary'
+                        type='submit'
+                        disabled={isSubmitting || Date.now() < submitTime + 4000}
+                        style={{marginBottom: '20px', marginTop: '20px'}}>
+                        {isSubmitting ? 'Обработка запроса...' : 'Обновить информацию о пользователе'}
                     </Button>
                 </div>
             </Form>
