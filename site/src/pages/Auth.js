@@ -58,7 +58,20 @@ const Auth = observer(() => {
                         </Button>
                     </Row>
                 </Form>
+
             </Card>
+            <div
+                style={{ display:'flex',alignItems: "center", justifyContent: "center",
+                textAlign: "left", fontFamily: "Arial, sans-serif",
+                position: "absolute", bottom: "10px", width: "90%",
+                height: "70px", backgroundColor: "white", color: "black",
+                border: "1px solid black", boxShadow: "2px 2px 5px rgba(0, 0, 0, 0.2)", padding: "10px",
+            }}>
+                Если вы считаете, что у вас должны быть права, чтобы пользоваться этой страницей, но вы почему-то не можете на неё зайти,
+                то, вам нужно обратиться к своему начальнику, чтобы он дал вам доступ. <br />
+                Если вы считаете, что какие-то кнопки неправильно работают, вам не хватает функционала
+                или у вас есть какие-то вопросы, пожалуйста, напишите на почту misha.bogdanov.03@gmail.com
+            </div>
         </Container>
     );
 });

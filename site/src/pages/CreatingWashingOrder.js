@@ -14,8 +14,7 @@ import Modal from "react-bootstrap/Modal";
 import {InputNumber, InputPicker} from 'rsuite';
 import InputField from "../model/InputField";
 import {
-    createWashingOrder, getActualPolishingOrders,
-    getActualWashingOrders, getAllWashingOrders,
+    createWashingOrder, getAllWashingOrders,
     getPriceAndFreeTime,
 } from "../http/orderAPI";
 
@@ -41,15 +40,15 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
+const smallInputStyle = {
+    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
+
 const CreatingWashingOrder = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
     const [showModalB, setShowModalB] = useState(false);
-
-
-
-    const [orderName, setOrderName] = useState('');
     const [itemsCount, setItemsCount] = useState([{name: '', value: 0}]);
     const [newTime, setNewTime] = useState([{startTime: null, endTime: null, box: 0}]);
 
@@ -59,7 +58,6 @@ const CreatingWashingOrder = () => {
     const [selectedItems, setSelectedItems] = useState([]);
 
     const [includedOrders, setIncludedOrders] = useState([]);
-    const [connectedOrders, setConnectedOrders] = useState([]);
 
     const [additionalOrders, setAdditionalOrders] = useState([]);
     const [mainOrders, setMainOrders] = useState([]);
@@ -164,14 +162,8 @@ const CreatingWashingOrder = () => {
     const handleGetPrice = async (e) => {
         e.preventDefault();
         try {
-            let allOrders = []
-            allOrders = [...selectedItems.map(i => i.replace(/ /g, '_')),
-                ...includedOrders.map(item => item.replace(/ /g, '_'))];
-            console.log(allOrders)
-            console.log(start.toISOString())
-            console.log(end.toISOString())
-            console.log(carType)
-            const response = await getPriceAndFreeTime(allOrders,
+
+            const response = await getPriceAndFreeTime(selectedItems.map(i => i.replace(/ /g, '_')),
                 carType, "wash", null, start.toISOString(), end.toISOString());
 
             setPrice(response.price);
@@ -205,18 +197,6 @@ const CreatingWashingOrder = () => {
         });
 
         setStringTimeForCurrentDay(timeStrings);
-    };
-
-    const handleGetOrders = async (event) => {
-        event.preventDefault();
-        try {
-            const response = await getActualWashingOrders(orderName.replace(/\s+/g, '_'));
-
-            setIncludedOrders(response.includedOrders.map(item => item.replace(/_/g, ' ')))
-            setConnectedOrders(response.connectedOrders.map(item => item.replace(/_/g, ' ')))
-        } catch (error) {
-            console.error(error);
-        }
     };
 
     const handleOpenModal = () => setShowModal(true);
@@ -287,8 +267,6 @@ const CreatingWashingOrder = () => {
                 requestEndTime.toISOString(),
                 administrator, specialist, boxNumber, bonuses, comments, carNumber, carType, price);
 
-            console.log(response)
-
         } catch (error) {
             if (error.response) {
                 alert(error.response.data.message)
@@ -346,117 +324,11 @@ const CreatingWashingOrder = () => {
     ];
     return (
         <>
-            <Form onSubmit={handleGetOrders}>
-                <InputField
-                    inputStyle={{
-                        fontWeight: 'bold', display: 'flex',
-                        fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
-                    }}
-                    label='Название типа мойки'
-                    id='orderName'
-                    value={orderName}
-                    onChange={setOrderName}
-                />
-                <div className='submit-container'>
-                    <Button className='btn-submit' variant='primary' type='submit'>
-                        Найти связанные с этой услугой заказы
-                    </Button>
-                </div>
-            </Form>
-            <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
-                Выберите дополнительные услуги
-            </Button>
-            <Modal show={showModal}
-                   onHide={handleCloseModal}
-                   dialogClassName="custom-modal-dialog">
-                <Modal.Header closeButton>
-                    <Modal.Title>Выберите заказы</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {connectedOrders.sort().map(item => (
-                        <div key={item}
-                             style={{
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                                 fontSize: '16px'
-                             }}>
-                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                            <InputNumber
-                                size="sm"
-                                placeholder="sm"
-                                style={stylesForInput}
-                                min={0}
-                                onChange={value => handleItemChange(item, value)}
-                                value={getItemValueByName(item) || 0}
-                            />
-                        </div>
-                    ))}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant='secondary' onClick={handleCloseModal}>
-                        Закрыть
-                    </Button>
-                </Modal.Footer>
-            </Modal>
-            {selectedItems.length > 0 ? (
-                <div className="selected-items-container text-center">
-                    <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
-                        Доп услуги:
-                    </Form.Label>
-                    <div className="selected-items">
-                        {selectedItems
-                            .filter((item, index) => selectedItems.indexOf(item) === index)
-                            .map((item) => {
-                                if (getItemValueByName(item) > 0) {
-                                    return (
-                                        <span key={item} className="item">
-                  {`${item} (${getItemValueByName(item)})`}
-                </span>
-                                    );
-                                }
-                                return null;
-                            })}
-                    </div>
-                </div>
-            ) : (
-                <div className='selected-items-container text-center'>
-                    <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
-                        Дополнительные услуги:
-                    </Form.Label>
-                    <div className='selected-items-container text-center'>
-                        <span className='empty-list' style={{fontSize: '1.1em'}}>
-                            Нет дополнительных услуг
-                        </span>
-                    </div>
-                </div>
-            )
-            }
-            {includedOrders.length > 0 ? (
-                <div className='selected-items-container text-center'>
-                    <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
-                        В этот заказ уже включены:
-                    </Form.Label>
-                    <div className='selected-items'>
-                        {includedOrders.map((item, index) => (
-                            <span key={index} className='item'>
-          {item.replace(/_/g, ' ')}
-        </span>
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <div className='selected-items-container text-center'>
-                    <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
-                        В этот заказ уже включены:
-                    </Form.Label>
-                    <div className='selected-items-container text-center'>
-                        <span className='empty-list' style={{fontSize: '1.1em'}}>
-                            Нет включенных заказов
-                        </span>
-                    </div>
-                </div>
-            )}
+            <p style={{...inputStyle,marginTop:'15px'}}>Страница добавления заказов на мойку</p>
+            <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
+                на автомойку из всех актуальных услуг, а потом получить всю информацию о нём</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова и набор услуг</p>
+
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Основные услуги
@@ -495,7 +367,7 @@ const CreatingWashingOrder = () => {
                 </Modal.Footer>
             </Modal>
 
-            <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
+            <Button className='full-width' variant='secondary' onClick={handleOpenModalB}>
                 Дополнительные услуги
             </Button>
             <Modal show={showModalB}
@@ -526,13 +398,43 @@ const CreatingWashingOrder = () => {
                     ))}
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant='secondary' onClick={handleCloseModal}>
+                    <Button variant='secondary' onClick={handleCloseModalB}>
                         Закрыть
                     </Button>
                 </Modal.Footer>
             </Modal>
 
-
+            {selectedItems.length > 0 ? (
+                <div className="selected-items-container text-center">
+                    <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
+                        Выбранные услуги:
+                    </Form.Label>
+                    <div className="selected-items">
+                        {selectedItems
+                            .filter((item, index) => selectedItems.indexOf(item) === index)
+                            .map((item) => {
+                                if (getItemValueByName(item) > 0) {
+                                    return (
+                                        <span key={item} className="item">
+                  {`${item} (${getItemValueByName(item)})`}
+                </span>
+                                    );
+                                }
+                                return null;
+                            })}
+                    </div>
+                </div>
+            ) : (
+                <div className='selected-items-container text-center'>
+                    <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
+                        Выбранные услуги:
+                    </Form.Label>
+                    <div className='selected-items-container text-center'>
+                        <span className='empty-list' style={{fontSize: '1.1em'}}>
+                            Нет выбранных услуг
+                        </span>
+                    </div>
+                </div>)}
 
             <Divider></Divider>
             <p style={inputStyle}>Выберите тип кузова</p>
@@ -574,7 +476,7 @@ const CreatingWashingOrder = () => {
             <p style={inputStyle}>Расписание с доступным временем</p>
 
             <InputPicker
-                data = {stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({ label: item, value: item }))}
+                data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
                 style={{
                     width: 500,
                     marginLeft: 'auto',
@@ -596,19 +498,19 @@ const CreatingWashingOrder = () => {
                     label='Номер телефона клиента:'
                     id='name'
                     value={userContacts}
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     onChange={setUserContacts}
                 />
                 <InputField
                     label='Номер автомобиля:'
                     id='carNumber'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={carNumber}
                     onChange={setCarNumber}
                 />
                 <InputField
                     label='Специалист:'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
@@ -616,21 +518,21 @@ const CreatingWashingOrder = () => {
                 <InputField
                     label='Администратор:'
                     id='administrator'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={administrator}
                     onChange={setAdministrator}
                 />
                 <InputField
                     label='Количество использованных бонусов:'
                     id='bonuses'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={bonuses}
                     onChange={setBonuses}
                 />
                 <InputField
                     label='Комментарии:'
                     id='comments'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={comments}
                     onChange={setComments}
                 />

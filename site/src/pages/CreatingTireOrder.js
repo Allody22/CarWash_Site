@@ -24,6 +24,20 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
+const smallInputStyle = {
+    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
+
+const styles = {
+    width: 500, display: 'block',
+    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
+};
+
+
+const stylesForInput = {
+    width: 190, marginBottom: 10, marginTop: 5
+};
+
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15','R16','R17','R18','R19','R20','R21','R22'].map(item => ({label: item, value: item}));
@@ -235,17 +249,6 @@ const CreatingTireOrder = () => {
         }
     };
 
-    const inputStyle = {
-        fontWeight: 'bold', display: 'flex',
-        fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-    }
-
-
-    const styles = {
-        width: 500, display: 'block',
-        marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
-    };
-
     const timeStringToMinutes = (timeString) => {
         const [hours, minutes] = timeString.split(':');
         return parseInt(hours) * 60 + parseInt(minutes);
@@ -271,9 +274,6 @@ const CreatingTireOrder = () => {
         return a.localeCompare(b);
     };
 
-    const stylesForInput = {
-        width: 190, marginBottom: 10, marginTop: 5
-    };
 
 
     const predefinedBottomRanges = [
@@ -292,6 +292,11 @@ const CreatingTireOrder = () => {
     ];
     return (
         <>
+            <p style={{...inputStyle,marginTop:'15px'}}>Страница добавления заказов на шиномонтаж</p>
+            <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
+                на шиномонтаж из всех актуальных услуг, а потом получить всю информацию о нём</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, диаметр колёс и набор услуг</p>
+
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
             </Button>

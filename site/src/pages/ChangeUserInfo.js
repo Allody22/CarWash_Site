@@ -5,7 +5,6 @@ import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import InputField from "../model/InputField";
 import {TagPicker} from "rsuite";
-import {logDOM} from "@testing-library/react";
 
 
 const rolesArray = [
@@ -19,9 +18,13 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
+const smallInputStyle = {
+    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
+
 const ChangeUserInfo = () => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitTime, setSubmitTime] = useState(0);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+
     const [fullName, setFullName] = useState('');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -29,87 +32,67 @@ const ChangeUserInfo = () => {
     const [enSelectedRoles, setEnSelectedRoles] = useState([]);
 
 
-    const sendUpdateRequest = async (e) => {
-        e.preventDefault();
-        if (isSubmitting) {
-            return;
-        }
-        setIsSubmitting(true);
-        setSubmitTime(Date.now());
-        try {
-            const data = await updateUserInfo(email, username, fullName, enSelectedRoles);
-            alert(data);
-        } catch (error) {
-            if (error.response) {
-                alert(error.response.data.message)
-            } else {
-                alert("Системная ошибка, попробуйте позже")
-            }
-        } finally {
-            setTimeout(() => setIsSubmitting(false), 4000);
-        }
-    };
-
     useEffect(() => {
         changeRolesToEnglish()
-        console.log(selectedRoles)
     }, [selectedRoles]);
     const changeRolesToEnglish = () => {
-        setEnSelectedRoles([]);
-        for (const item in selectedRoles) {
-            let roleName = '';
-            if (item === 'Модератор') {
-                roleName = 'ROLE_MODERATOR';
-            } else if (item === 'Админ') {
-                roleName = 'ROLE_ADMIN';
-            } else if (item === 'Администратор') {
-                roleName = 'ROLE_ADMINISTRATOR'
-            } else if (item === 'Обычный пользователь') {
-                roleName = 'ROLE_USER';
-            } else {
-                roleName = 'ERROR'
-            }
-            setEnSelectedRoles(...enSelectedRoles,roleName);
-        }
-        // console.log(enSelectedRoles)
+        const arrayOfRoles = []
+        selectedRoles.forEach(item => arrayOfRoles.push(rolesToEnglishMap(item)));
+        setEnSelectedRoles(arrayOfRoles);
     };
 
 
-    // const changeRolesToEnglish = (item) => {
-    //     let roleName = '';
-    //     if (item === 'Модератор') {
-    //         roleName = 'ROLE_MODERATOR';
-    //     } else if (item === 'Админ') {
-    //         roleName = 'ROLE_ADMIN';
-    //     } else if (item === 'Администратор') {
-    //         roleName = 'ROLE_ADMINISTRATOR'
-    //     } else if (item === 'Клиент') {
-    //         roleName = 'ROLE_USER';
-    //     } else {
-    //         roleName = 'ERROR'
-    //     }
-    //     setEnSelectedRoles(...enSelectedRoles,roleName)
-    //     console.log(enSelectedRoles)
-    // };
-
-    const handleSelect = (value, item, event) => {
-        const index = selectedRoles.indexOf(item);
-        if (index === -1) {
-            setSelectedRoles([...selectedRoles, item]);
+    const rolesToEnglishMap = (item) => {
+        if (item === 'Модератор') {
+            return 'ROLE_MODERATOR';
+        } else if (item === 'Админ') {
+            return 'ROLE_ADMIN';
+        } else if (item === 'Администратор') {
+            return 'ROLE_ADMINISTRATOR'
+        } else if (item === 'Обычный пользователь') {
+            return 'ROLE_USER';
         } else {
-            const updatedRoles = selectedRoles.filter((r) => r !== item);
-            setSelectedRoles(() => updatedRoles);
+            return 'ERROR'
         }
     };
+
+    const handleTagRemoved = (item) => {
+        setSelectedRoles(prevSelectedRoles =>
+            prevSelectedRoles.filter(role => role !== item)
+        );
+    };
+
+    const handleSubmit = async (event) => {
+        event.preventDefault()
+        if (showConfirmation) {
+            try {
+                const data = await updateUserInfo(email, username, fullName, enSelectedRoles);
+                console.log(data)
+            } catch (error) {
+                if (error.response) {
+                    alert(error.response.data.message)
+                } else {
+                    console.log(error)
+                    alert("Системная ошибка, попробуйте позже")
+                }
+            }
+            setShowConfirmation(false);
+        } else {
+            setShowConfirmation(true);
+        }
+    }
 
 
     return (
         <>
+            <p style={{...inputStyle,marginTop:'15px'}}>Страница изменения информации о человеке в базе данных</p>
+
             <p style={{...inputStyle, marginTop: '15px'}}>Выберите роли пользователя</p>
-            <p style={inputStyle}>От этого зависит, смогут ли они пользоваться приложением и сайтом</p>
+            <p style={smallInputStyle}>От этого зависит, смогут ли они пользоваться приложением и сайтом</p>
             <TagPicker data={rolesArray}
                        block
-                       onSelect={handleSelect}
+                       onChange={value => setSelectedRoles(value)}
+                       onClose={handleTagRemoved}
                        style={{
                            width: '500px',
                            display: 'block',
@@ -121,7 +104,7 @@ const ChangeUserInfo = () => {
                        }}
             />
 
-            <Form onSubmit={sendUpdateRequest}>
+            <Form onSubmit={handleSubmit}>
                 <InputField
                     inputStyle={inputStyle}
                     label='Номер телефона'
@@ -143,14 +126,33 @@ const ChangeUserInfo = () => {
                     value={email}
                     onChange={setEmail}
                 />
+                {showConfirmation && (
+                    <div className='confirmation-container'>
+                        <div className='confirmation-message'>
+                            <p style={inputStyle}>Вы уверены, что хотите отправить запрос?</p>
+                            <p>Это изменит информацию об этом человеке ВО ВСЕЙ базе данных для ВСЕХ</p>
+                            <div className='confirmation-buttons'>
+                                <Button onClick={() => setShowConfirmation(false)}
+                                        style={{marginRight: '10px', marginTop: '10px'}}>
+                                    Отменить
+                                </Button>
+                                <Button variant='primary' style={{marginLeft: '10px', marginTop: '10px'}} type='submit'
+                                        onSubmit={handleSubmit}>
+                                    Подтвердить
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className='submit-container'>
                     <Button
                         className='btn-submit'
                         variant='primary'
                         type='submit'
-                        disabled={isSubmitting || Date.now() < submitTime + 4000}
-                        style={{marginBottom: '20px', marginTop: '20px'}}>
-                        {isSubmitting ? 'Обработка запроса...' : 'Обновить информацию о пользователе'}
+                        style={{marginBottom: '20px', marginTop: '20px'}}
+                    >
+                        Обновить информацию
                     </Button>
                 </div>
             </Form>

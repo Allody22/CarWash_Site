@@ -1,6 +1,6 @@
 import Admin from "./pages/Admin";
 import {
-    ADMIN_ROUTE, CHANGE_USERINFO_ROUTE,
+    ADMIN_ROUTE, CHANGE_SERVICE_INFO, CHANGE_USERINFO_ROUTE,
     CREATE_POLISHING_ORDER_ROUTE, CREATE_TIRE_ORDER_ROUTE,
     CREATE_WASHING_ORDER_ROUTE,
     LOGIN_ROUTE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE,
@@ -12,6 +12,7 @@ import CreatingWashingOrder from "./pages/CreatingWashingOrder";
 import CreatingPolishingOrder from "./pages/CreatingPolishingOrder";
 import CreatingTireOrder from "./pages/CreatingTireOrder";
 import UpdateOrderInfo from "./pages/UpdateOrderInfo";
+import ChangeServiceInfo from "./pages/ChangeServiceInfo";
 
 
 export const authRoutes = [
@@ -42,6 +43,10 @@ export const authRoutes = [
     {
         path:UPDATE_ORDER_INFO_ROUTE,
         Component: UpdateOrderInfo
+    },
+    {
+        path:CHANGE_SERVICE_INFO,
+        Component: ChangeServiceInfo
     }
 ]
 

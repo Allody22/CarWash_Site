@@ -8,7 +8,7 @@ import orderTypeMap from "../model/OrderTypeMap";
 import {useHistory} from "react-router-dom";
 import {DatePicker, Divider} from "rsuite";
 import addDays from "date-fns/addDays";
-import {Button, Toast} from "react-bootstrap";
+import {Button} from "react-bootstrap";
 
 const inputStyle = {
     fontWeight: 'bold', display: 'flex',

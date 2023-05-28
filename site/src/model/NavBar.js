@@ -4,8 +4,7 @@ import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import {
     ADMIN_ROUTE,
-    CHANGE_USERINFO_ROUTE,
-    LOGIN_ROUTE, ORDERS_TABLE_ROUTE
+    LOGIN_ROUTE
 } from "../utils/consts";
 import {Button} from "react-bootstrap";
 import {observer} from "mobx-react-lite";
@@ -13,7 +12,7 @@ import Container from "react-bootstrap/Container";
 import {NavLink, useHistory} from 'react-router-dom'
 import {signOut} from "../http/userAPI";
 
-//Это мы короче видим на первом экране, надпись СлеваСверху слева сверху
+
 const NavBar = observer(() => {
     const {user} = useContext(Context)
     const history = useHistory()
@@ -33,15 +32,6 @@ const NavBar = observer(() => {
 
                         <Button
                             variant={"outline-light"}
-                            onClick={() => history.push(ORDERS_TABLE_ROUTE)}
-                            style={{marginRight:'20px'}}
-                        >
-                            Таблица со всеми заказа
-                        </Button>
-
-
-                        <Button
-                            variant={"outline-light"}
                             onClick={() => logOut()}
                             className="ml-2"
                         >
@@ -50,7 +40,7 @@ const NavBar = observer(() => {
                     </Nav>
                     :
                     <Nav className="ml-auto" style={{color: 'white'}}>
-                        <Button variant={"outline-light"} onClick={() => history.push(LOGIN_ROUTE)}>СправаСверху</Button>
+                        <Button variant={"outline-light"} onClick={() => history.push(LOGIN_ROUTE)}>Выйти</Button>
                     </Nav>
                 }
             </Container>

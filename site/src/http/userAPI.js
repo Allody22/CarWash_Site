@@ -29,5 +29,12 @@ export const check = async () => {
 }
 
 export const updateUserInfo = async (email, username, fullName, roles) => {
-    return await $authHost.put('api/admin/updateUserInfo', {email, username, fullName, roles});
+    const requestBody = {
+        email: email,
+        fullName: fullName,
+        username: username,
+        roles: roles,
+    };
+    console.log(requestBody)
+    return await $authHost.put('api/admin/updateUserInfo',requestBody);
 };

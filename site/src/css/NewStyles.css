@@ -1,0 +1,20 @@
+.confirmation-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.confirmation-message {
+    border: 3px solid black;
+    background-color: white;
+    border-radius: 6px;
+    width: 50%;
+    padding: 20px;
+    text-align: center;
+}

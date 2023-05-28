@@ -2,9 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
-import {toast} from "react-toastify";
 import {DatePicker} from 'rsuite';
-import {Message} from 'rsuite';
 
 import addDays from 'date-fns/addDays';
 import {Divider} from 'rsuite';
@@ -28,6 +26,10 @@ const carTypesArray = [
     '3 тип - джип',
     'Неизвестно'
 ].map(item => ({label: item, value: item}));
+
+const smallInputStyle = {
+    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
 
 const styles = {
     width: 500, display: 'block',
@@ -319,6 +321,11 @@ const CreatingPolishingOrder = () => {
 
     return (
         <>
+            <p style={{...inputStyle,marginTop:'15px'}}>Страница добавления заказов на полировку</p>
+            <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
+                на полировку из всех актуальных услуг, а потом получить всю информацию о нём</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова и набор услуг</p>
+
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
             </Button>

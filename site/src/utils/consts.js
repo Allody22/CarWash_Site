@@ -13,3 +13,5 @@ export const ORDERS_TABLE_ROUTE = '/ordersTable'
 export const CHANGE_USERINFO_ROUTE = '/changeUserInfo'
 
 export const UPDATE_ORDER_INFO_ROUTE = `/updateOrderInfo/:id`
+
+export const CHANGE_SERVICE_INFO = `/changeServiceInfo`

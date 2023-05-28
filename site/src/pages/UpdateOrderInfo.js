@@ -1,19 +1,20 @@
 import '../css/CreatingOrder.css';
-import {updateUserInfo} from "../http/userAPI";
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
-import Modal from "react-bootstrap/Modal";
 import InputField from "../model/InputField";
-import {useHistory, useParams} from "react-router-dom";
-import DataField from "../model/DataField";
-import {getActualPolishingOrders, getOrderInfo, updateOrderInfo} from "../http/orderAPI";
+import {useParams} from "react-router-dom";
+import {getOrderInfo, updateOrderInfo} from "../http/orderAPI";
 import orderTypeMap from "../model/OrderTypeMap";
 import {DatePicker, InputPicker} from "rsuite";
 import addDays from "date-fns/addDays";
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
+
+const smallInputStyle = {
+    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
 
 const carTypesArray = [
     '1 тип - седан',
@@ -187,6 +188,11 @@ const UpdateOrderInfo = () => {
 
         return (
             <>
+                <p style={{...inputStyle,marginTop:'15px'}}>Страница изменения информации о заказе</p>
+                <p style={smallInputStyle}>Вы можете открыть таблицу с заказами за какой-то день,
+                выбрать там заказ, информацию о котором хотите обновить, а он сам окажется здесь</p>
+
+
                 <Form onSubmit={sendUpdateRequest}>
                     <InputField
                         inputStyle={inputStyle}
