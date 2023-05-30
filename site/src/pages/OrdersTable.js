@@ -52,6 +52,9 @@ const columns = [
     {Header: 'Размер шин', accessor: 'wheelR',
         Cell: ({value}) => value ? orderTypeMap[value] || value : "Неизвестно"
     },
+    { Header: 'Был ли сделан заказ', accessor: 'executed',
+        Cell: ({ value }) => (value ? 'Да' : 'Нет'),
+    },
     {Header: 'Администратор', accessor: 'administrator'},
     {Header: 'Специалист', accessor: 'specialist'},
     {Header: 'Бокс', accessor: 'boxNumber'},

@@ -60,7 +60,8 @@ export const createTireOrder = async (orders, userContacts, wheelR, startTime,
 };
 
 
-export const updateOrderInfo = async (orderId, userPhone, orderType, price,wheelR,
+export const updateOrderInfo = async (orderId, userPhone, orderType,
+                                      price,wheelR,
                                       startTime, administrator, autoNumber,
                                       autoType, specialist, boxNumber, bonuses,
                                       comments, executed, endTime) => {
@@ -77,9 +78,11 @@ export const updateOrderInfo = async (orderId, userPhone, orderType, price,wheel
         comments: comments,
         autoNumber: autoNumber,
         autoType: autoType,
-        price: price
+        price: price,
+        executed: executed
     };
-    const response = await $authHost.put('api/orders/updateOrderInfor', requestBody);
+    console.log("executed: " + executed)
+    const response = await $host.put('api/orders/updateOrderInfo', requestBody);
     return response.data;
 };
 

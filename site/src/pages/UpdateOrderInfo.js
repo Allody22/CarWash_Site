@@ -156,7 +156,9 @@ const UpdateOrderInfo = () => {
         const sendUpdateRequest = async (e) => {
             e.preventDefault();
             try {
-                const data = await updateOrderInfo(orderId, userPhone, orderType, price, wheelR, startTime.toISOString(), administrator,
+                console.log(executedToCode)
+                 const data = await updateOrderInfo(orderId, userPhone, orderType,
+                     price, wheelR, startTime.toISOString(), administrator,
                     autoNumber, carType, specialist, boxNumber, bonuses, comments, executedToCode, endTime.toISOString());
                 console.log(data)
             } catch
@@ -354,7 +356,7 @@ const UpdateOrderInfo = () => {
                     />
                     <div className='submit-container'>
                         <Button className='btn-submit' variant='primary'
-                                type='submit' style={{marginBottom: '20px', marginTop: '20px'}}> >
+                                type='submit' style={{marginBottom: '20px', marginTop: '20px'}}>
                             Изменить информацию
                         </Button>
                     </div>
