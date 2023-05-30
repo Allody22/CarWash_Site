@@ -11,7 +11,3 @@
     font-size: 20px;
     text-align: center;
 }
-
-.rs-picker-menu .rs-picker-calendar-body .rs-picker-cell-selected .rs-picker-cell-inner {
-    color: red;
-}

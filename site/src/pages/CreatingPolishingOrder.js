@@ -259,8 +259,8 @@ const CreatingPolishingOrder = () => {
         setSubmitTime(Date.now());
         try {
             let allOrders = []
-            allOrders = [...selectedItems.map(i => i.replace(/ /g, '_')),
-                ...includedOrders.map(item => item.replace(/ /g, '_'))];
+            allOrders = [...selectedItems,
+                ...includedOrders];
 
             const response = await createPolishingOrder(allOrders, userContacts, requestStartTime.toISOString(),
                 requestEndTime.toISOString(),
