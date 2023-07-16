@@ -4,9 +4,9 @@ import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import InputField from "../model/InputField";
 import {useParams} from "react-router-dom";
-import {getOrderInfo, updateOrderInfo} from "../http/orderAPI";
-import orderTypeMap from "../model/OrderTypeMap";
-import {DatePicker, InputPicker} from "rsuite";
+import {deleteOrderById, getOrderInfo, updateOrderInfo} from "../http/orderAPI";
+import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
+import {DatePicker, InputPicker, Notification, useToaster} from "rsuite";
 import addDays from "date-fns/addDays";
 
 const wheelSizeArray = [
@@ -45,12 +45,23 @@ const UpdateOrderInfo = () => {
         const [specialist, setSpecialist] = useState('');
         const [carTypeMap, setCarTypeMap] = useState('');
         const [carType, setCarType] = useState(0);
+        const toaster = useToaster();
+
 
         const [boxNumber, setBoxNumber] = useState(0);
         const [bonuses, setBonuses] = useState(0);
         const [comments, setComments] = useState('');
         const [executed, setExecuted] = useState('');
         const [executedToCode, setExecutedToCode] = useState(false);
+
+        const [errorResponse, setErrorResponse] = useState();
+        const [errorFlag, setErrorFlag] = useState(false);
+
+        const [successResponse, setSuccessResponse] = useState();
+
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [submitTime, setSubmitTime] = useState(0);
+        const [showConfirmation, setShowConfirmation] = useState(false);
 
 
         const {id} = useParams();
@@ -87,9 +98,12 @@ const UpdateOrderInfo = () => {
                     } catch
                         (error) {
                         if (error.response) {
-                            alert(error.response.data.message)
+                            setErrorResponse(error.response.data.message)
+                            setErrorFlag(flag => !flag)
                         } else {
-                            alert("Системная ошибка, попробуйте позже")
+                            setErrorResponse("Системная ошибка, проверьте правильность " +
+                                "введённой информации и попробуйте еще раз")
+                            setErrorFlag(flag => !flag)
                         }
                     }
                 }
@@ -139,35 +153,121 @@ const UpdateOrderInfo = () => {
             }
         };
 
-    const mapExecutedToString = (currentExecuted) => {
-            if (currentExecuted)
-            {
+        const errorIdMessage = (
+            <Notification
+                type="error"
+                header="Ошибка!"
+                closable
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    <p>Пожалуйста, введите номер заказа.</p>
+                </div>
+            </Notification>
+        );
+
+        const errorResponseMessage = (
+            <Notification
+                type="error"
+                header="Ошибка!"
+                closable
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    {errorResponse}
+                </div>
+            </Notification>
+        );
+
+        useEffect(() => {
+            if (errorResponse) {
+                toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            }
+        }, [errorFlag]);
+
+        const mapExecutedToString = (currentExecuted) => {
+            if (currentExecuted) {
                 return "Заказ был выполнен"
             } else {
                 return "Заказ не был выполнен"
             }
-    };
+        };
 
         useEffect(() => {
             const executedToCode = mapExecutedToCode(executed);
             setExecutedToCode(executedToCode)
         }, [executed]);
 
+        const successMessage = (
+            <Notification
+                type="success"
+                header="Успешно!"
+                closable
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    <p>{successResponse}</p>
+                </div>
+            </Notification>
+        );
+
+        useEffect(() => {
+            if (successResponse) {
+                toaster.push(successMessage, {placement: "bottomEnd"});
+            }
+        }, [successResponse]);
+
         const sendUpdateRequest = async (e) => {
             e.preventDefault();
             try {
-                console.log(executedToCode)
-                 const data = await updateOrderInfo(orderId, userPhone, orderType,
-                     price, wheelR, startTime.toISOString(), administrator,
+                const data = await updateOrderInfo(orderId, userPhone, orderType,
+                    price, wheelR, startTime.toISOString(), administrator,
                     autoNumber, carType, specialist, boxNumber, bonuses, comments, executedToCode, endTime.toISOString());
-                console.log(data)
+                setSuccessResponse(data.message)
             } catch
                 (error) {
                 if (error.response) {
-                    alert(error.response.data.message)
+                    setErrorResponse(error.response.data.message)
+                    setErrorFlag(flag => !flag)
                 } else {
-                    alert("Системная ошибка, попробуйте позже")
+                    setErrorResponse("Системная ошибка, проверьте правильность " +
+                        "введённой информации и попробуйте еще раз")
+                    setErrorFlag(flag => !flag)
                 }
+            }
+        };
+
+        function isNumberString(str) {
+            return /^[0-9]+$/.test(str);
+        }
+
+        useEffect(() => {
+            if (showConfirmation && !isNumberString(orderId)) {
+                setShowConfirmation(false)
+                toaster.push(errorIdMessage, {placement: "bottomEnd"});
+            }
+        }, [showConfirmation]);
+
+        const deleteOrder = async (e) => {
+            e.preventDefault();
+            if (showConfirmation && isNumberString(orderId)) {
+                try {
+                    const data = await deleteOrderById(orderId);
+                    setSuccessResponse(data.message)
+                } catch
+                    (error) {
+                    if (error.response) {
+                        setErrorResponse(error.response.data.message)
+                        setErrorFlag(flag => !flag)
+                    } else {
+                        setErrorResponse("Системная ошибка, проверьте правильность " +
+                            "введённой информации и попробуйте еще раз")
+                        setErrorFlag(flag => !flag)
+                    }
+                }
+                setShowConfirmation(false);
+            } else {
+                setShowConfirmation(true);
             }
         };
 
@@ -190,9 +290,9 @@ const UpdateOrderInfo = () => {
 
         return (
             <>
-                <p style={{...inputStyle,marginTop:'15px'}}>Страница изменения информации о заказе</p>
+                <p style={{...inputStyle, marginTop: '15px'}}>Страница изменения информации о заказе</p>
                 <p style={smallInputStyle}>Вы можете открыть таблицу с заказами за какой-то день,
-                выбрать там заказ, информацию о котором хотите обновить, а он сам окажется здесь</p>
+                    выбрать там заказ, информацию о котором хотите обновить, а он сам окажется здесь</p>
 
 
                 <Form onSubmit={sendUpdateRequest}>
@@ -361,6 +461,37 @@ const UpdateOrderInfo = () => {
                         </Button>
                     </div>
                 </Form>
+                {showConfirmation && (
+                    <div className='confirmation-container'>
+                        <div className='confirmation-message'>
+                            <p style={inputStyle}>Вы уверены, что хотите удалить заказ?</p>
+                            <p>Это изменит информацию об этом заказе ВО ВСЕЙ базе данных для ВСЕХ</p>
+                            <p>Пожалуйста, предварительно спросите у клиента разрешение на удаление его заказа</p>
+                            <div className='confirmation-buttons'>
+                                <Button onClick={() => setShowConfirmation(false)}
+                                        style={{marginRight: '10px', marginTop: '10px'}}>
+                                    Отменить
+                                </Button>
+                                <Button variant='primary' style={{marginLeft: '10px', marginTop: '10px'}} type='submit'
+                                        onClick={deleteOrder}>
+                                    Подтвердить
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div className='submit-container'>
+                    <Button
+                        className='btn-delete'
+                        variant='danger'
+                        type='submit'
+                        disabled={isSubmitting || Date.now() < submitTime + 4000}
+                        onClick={deleteOrder}
+                        style={{marginBottom: '20px', marginTop: '20px'}}
+                    >
+                        {isSubmitting ? 'Обработка запроса...' : 'Удалить заказ'}
+                    </Button>
+                </div>
             </>
         );
     }

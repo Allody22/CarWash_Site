@@ -15,3 +15,6 @@ export const CHANGE_USERINFO_ROUTE = '/changeUserInfo'
 export const UPDATE_ORDER_INFO_ROUTE = `/updateOrderInfo/:id`
 
 export const CHANGE_SERVICE_INFO = `/changeServiceInfo`
+
+export const CREATE_NEW_SERVICE = `/createNewService`
+

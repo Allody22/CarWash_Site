@@ -1,13 +1,12 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import {
-    Notification,
+    InputPicker,
+    Notification, TagPicker,
     useToaster,
 } from 'rsuite';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
-
-import {SelectPicker} from 'rsuite';
 
 import 'rsuite/dist/rsuite.css';
 
@@ -15,14 +14,11 @@ import Modal from "react-bootstrap/Modal";
 
 import InputField from "../model/InputField";
 import {
-    getActualPolishingOrders,
-    getActualTireOrders,
-    getAllWashingOrders,
-    getServiceInfo,
-    updatePolishingService,
-    updateTireService,
-    updateWashingService,
+    createNewService
 } from "../http/orderAPI";
+import orderTypeMapFromRussian from "../model/map/OrderTypeMapFromRussian";
+import connectedServiceMap from "../model/map/ConnectedServiceMap";
+import includedServiceMap from "../model/map/IncludedServiceMap";
 
 const smallInputStyle = {
     display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
@@ -32,14 +28,48 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
-const ChangeServiceInfo = () => {
+const serviceTypesArray = [
+    'Шиномонтаж',
+    'Мойка',
+    'Полировка'
+].map(item => ({label: item, value: item}));
+
+const washingTypesArray = [
+    'VIP',
+    'ELITE',
+    'Стандарт',
+    'Эконом'
+].map(item => ({label: item, value: item}));
+
+const rolesTypesArray = [
+    'Главная',
+    'Дополнительная'
+].map(item => ({label: item, value: item}));
+
+const styles = {
+    width: 500, display: 'block',
+    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
+};
+
+const stylesUnderButton = {
+    width: 500, display: 'block',
+    marginBottom: 35, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
+};
+
+
+const AddNewService = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
 
     const [showModalB, setShowModalB] = useState(false);
 
-
+    const [serviceType, setServiceType] = useState('');
+    const [washingTypeIncluded, setWashingTypeIncluded] = useState([]);
+    const [washingTypeConnected, setWashingTypeConnected] = useState([]);
+    const [washingTypeIncludedEnglish, setWashingTypeIncludedEnglish] = useState([]);
+    const [washingTypeConnectedEnglish, setWashingTypeConnectedEnglish] = useState([]);
+    const [role, setRole] = useState('');
     const [orderName, setOrderName] = useState(null);
 
 
@@ -55,46 +85,43 @@ const ChangeServiceInfo = () => {
 
     const [showConfirmation, setShowConfirmation] = useState(false);
 
-    const [response, setResponse] = useState();
     const [errorResponse, setErrorResponse] = useState();
     const [errorFlag, setErrorFlag] = useState(false);
+    const [successResponse, setSuccessResponse] = useState();
 
 
-    const [allOrders, setAllOrders] = useState([]);
     const [wheelSizeAndPrice, setWheelSizeAndPrice] = useState([{wheelR: null, price: null}]);
     const [wheelSizeAndTime, setWheelSizeAndTime] = useState([{wheelR: null, time: null}]);
-
-
-    const options = allOrders
-        .map((item) => ({
-            label: item.name,
-            value: item.name,
-            type: item.type
-        }))
-        .flat();
 
 
     useEffect(() => {
         async function getAllOrders() {
             try {
-                const responseWashing = await getAllWashingOrders();
-                const ordersOfWashing = [...responseWashing.mainOrders.map(item => item.replace(/_/g, ' ')),
-                    ...responseWashing.additionalOrders.map(item => item.replace(/_/g, ' '))];
-                const ordersWithTypesWashing = ordersOfWashing.map((order) => ({name: order, type: "Мойка"}));
-
-
-                const responsePolishing = await getActualPolishingOrders();
-                const responseTire = await getActualTireOrders();
-
-                const ordersOfTireService = responseTire.orders.map(item => item.replace(/_/g, ' '));
-                const ordersWithTypesTire = ordersOfTireService.map((order) => ({name: order, type: "Шиномонтаж"}));
-
-                const ordersOfPolishing = responsePolishing.orders.map(item => item.replace(/_/g, ' '));
-                const ordersWithTypes = ordersOfPolishing.map((order) => ({name: order, type: "Полировка"}));
-
-                setAllOrders([...ordersWithTypes, ...ordersWithTypesTire, ...ordersWithTypesWashing]);
-
                 setWheelSizeAndPrice([])
+                const prices = [];
+                const time = [];
+
+                for (let i = 13; i <= 22; i++) {
+                    prices.push({
+                        level: `${i}`,
+                        price: 0,
+                    });
+
+                    time.push({
+                        level: `${i}`,
+                        time: 0,
+                    });
+                }
+
+                setWheelSizeAndPrice(prices);
+                setWheelSizeAndTime(time);
+
+                setPriceFirstType(0)
+                setPriceSecondType(0)
+                setPriceThirdType(0)
+                setTimeFirstType(0)
+                setTimeSecondType(0)
+                setTimeThirdType(0)
             } catch (error) {
                 if (error.response) {
                     alert(error.response.data.message)
@@ -114,11 +141,6 @@ const ChangeServiceInfo = () => {
     const handleCloseModalB = () => setShowModalB(false);
 
 
-    const getItemTypeByName = (name) => {
-        const item = allOrders.find(item => item.name === name);
-        return item ? item.type : undefined;
-    }
-
     const getPriceByWheelR = (name) => {
         const item = wheelSizeAndPrice.find(item => item.level === name);
         return item ? item.price : "Нет информации про цену";
@@ -129,89 +151,6 @@ const ChangeServiceInfo = () => {
         return item ? item.time : "Нет информации про цену";
     }
 
-
-    const mapOrderTypeToCode = (orderType) => {
-        switch (orderType) {
-            case "Мойка":
-                return "Wash";
-            case "Полировка":
-                return "Polishing";
-            case "Шиномонтаж":
-                return "Tire";
-            default:
-                return -1;
-        }
-    };
-
-
-    useEffect(() => {
-            async function getServiceInfoRequest() {
-                const enOrderType = mapOrderTypeToCode(getItemTypeByName(orderName));
-                if (enOrderType !== -1) {
-                    try {
-                        const responseOfServiceInfo = await getServiceInfo(orderName.replace(/ /g, '_'),
-                            mapOrderTypeToCode(getItemTypeByName(orderName)));
-
-                        if (getItemTypeByName(orderName) === "Мойка") {
-                            setPriceFirstType(responseOfServiceInfo.priceFirstType)
-                            setPriceSecondType(responseOfServiceInfo.priceSecondType)
-                            setPriceThirdType(responseOfServiceInfo.priceThirdType)
-                            setTimeFirstType(responseOfServiceInfo.timeFirstType)
-                            setTimeSecondType(responseOfServiceInfo.timeSecondType)
-                            setTimeThirdType(responseOfServiceInfo.timeThirdType)
-
-                            setWheelSizeAndTime([]);
-                            setWheelSizeAndPrice([]);
-
-                        } else if (getItemTypeByName(orderName) === "Шиномонтаж") {
-                            const prices = [];
-                            const time = [];
-                            Object.keys(responseOfServiceInfo).forEach((key) => {
-                                if (key.startsWith('price_r_')) {
-                                    prices.push({
-                                        level: key.replace('price_r_', ''),
-                                        price: responseOfServiceInfo[key],
-                                    });
-                                } else if (key.startsWith('time_r_')) {
-                                    time.push({
-                                        level: key.replace('time_r_', ''),
-                                        time: responseOfServiceInfo[key],
-                                    });
-                                }
-                            });
-                            setWheelSizeAndPrice(prices)
-                            setWheelSizeAndTime(time)
-                            setPriceFirstType(0)
-                            setPriceSecondType(0)
-                            setPriceThirdType(0)
-                            setTimeFirstType(0)
-                            setTimeSecondType(0)
-                            setTimeThirdType(0)
-
-                        } else if (getItemTypeByName(orderName) === "Полировка") {
-                            setPriceFirstType(responseOfServiceInfo.priceFirstType)
-                            setPriceSecondType(responseOfServiceInfo.priceSecondType)
-                            setPriceThirdType(responseOfServiceInfo.priceThirdType)
-                            setTimeFirstType(responseOfServiceInfo.timeFirstType)
-                            setTimeSecondType(responseOfServiceInfo.timeSecondType)
-                            setTimeThirdType(responseOfServiceInfo.timeThirdType)
-                            setWheelSizeAndPrice([]);
-                            setWheelSizeAndTime([]);
-                        }
-                    } catch (error) {
-                        if (error.response) {
-                            alert(error.response.data.message)
-                        } else {
-                            alert("Системная ошибка, попробуйте позже")
-                        }
-                    }
-                }
-            }
-
-            getServiceInfoRequest();
-        },
-        [orderName]
-    );
 
     const setPriceByWheelRForNewInfo = (event, level) => {
         setWheelSizeAndPrice(prevState => {
@@ -239,9 +178,19 @@ const ChangeServiceInfo = () => {
         });
     };
 
-    const handleOrderChange = (value) => {
-        setOrderName(value);
-    };
+    const successMessage = (
+        <Notification
+            type="success"
+            header="Успешно!"
+            closable
+            style={{border: '1px solid black'}}
+        >
+            <div style={{width: 320}}>
+                <p>{successResponse}</p>
+                <p>Вы успешно обновили информацию в базе данных.</p>
+            </div>
+        </Notification>
+    );
 
     const errorResponseMessage = (
         <Notification
@@ -262,47 +211,36 @@ const ChangeServiceInfo = () => {
         }
     }, [errorFlag]);
 
-    const message = (
-        <Notification
-            type="success"
-            header="Успешно!"
-            closable
-            style={{border: '1px solid black'}}
-        >
-            <div style={{width: 320}}>
-                <p>{response}</p>
-                <p>Вы успешно обновили информацию в базе данных.</p>
-            </div>
-        </Notification>
-    );
+    useEffect(() => {
+        if (successResponse) {
+            toaster.push(successMessage, {placement: "bottomEnd"});
+        }
+    }, [successResponse]);
 
     useEffect(() => {
-        if (response) {
-            toaster.push(message, {placement: "bottomEnd"});
-        }
-    }, [response]);
+        setWashingTypeIncludedEnglish(washingTypeIncluded.map(item => includedServiceMap[item]))
+    }, [washingTypeIncluded]);
+
+    useEffect(() => {
+        setWashingTypeConnectedEnglish(washingTypeIncluded.map(item => connectedServiceMap[item]))
+    }, [washingTypeConnected]);
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (showConfirmation) {
             try {
                 let response;
-                if (getItemTypeByName(orderName) === "Мойка") {
-                    response = await updateWashingService(priceFirstType, priceSecondType, priceThirdType, timeFirstType,
-                        timeSecondType, timeThirdType, orderName.replace(/ /g, '_'));
-                } else if (getItemTypeByName(orderName) === "Шиномонтаж") {
-                    response = await updateTireService(getPriceByWheelR('13'), getPriceByWheelR('14'),
-                        getPriceByWheelR('15'), getPriceByWheelR('16'), getPriceByWheelR('17'), getPriceByWheelR('18'),
-                        getPriceByWheelR('19'), getPriceByWheelR('20'), getPriceByWheelR('21'), getPriceByWheelR('22'),
-                        getTimeByWheelR('13'), getTimeByWheelR('14'),
-                        getTimeByWheelR('15'), getTimeByWheelR('16'), getTimeByWheelR('17'), getTimeByWheelR('18'),
-                        getTimeByWheelR('19'), getTimeByWheelR('20'), getTimeByWheelR('21'), getTimeByWheelR('22'),
-                        orderName.replace(/ /g, '_'));
-                } else if (getItemTypeByName(orderName) === "Полировка") {
-                    response = await updatePolishingService(priceFirstType, priceSecondType,
-                        priceThirdType, timeFirstType, timeSecondType, timeThirdType, orderName.replace(/ /g, '_'));
-                }
-                setResponse(null);
-                setResponse(response.message);
+                response = await createNewService(orderTypeMapFromRussian[serviceType], orderName.replaceAll(' ', '_'), priceFirstType,
+                    priceSecondType, priceThirdType, timeFirstType, timeSecondType, timeThirdType,
+                    getPriceByWheelR('13'), getPriceByWheelR('14'), getPriceByWheelR('15'),
+                    getPriceByWheelR('16'), getPriceByWheelR('17'), getPriceByWheelR('18'),
+                    getPriceByWheelR('19'), getPriceByWheelR('20'), getPriceByWheelR('21'),
+                    getPriceByWheelR('22'), getTimeByWheelR('13'), getTimeByWheelR('14'),
+                    getTimeByWheelR('15'), getTimeByWheelR('16'), getTimeByWheelR('17'),
+                    getTimeByWheelR('18'), getTimeByWheelR('19'), getTimeByWheelR('20'),
+                    getTimeByWheelR('21'), getTimeByWheelR('22'),
+                    orderTypeMapFromRussian[role], [...washingTypeIncludedEnglish, ...washingTypeConnectedEnglish])
+                setSuccessResponse(null)
+                setSuccessResponse(response.message)
             } catch
                 (error) {
                 if (error.response) {
@@ -320,27 +258,46 @@ const ChangeServiceInfo = () => {
         }
     };
 
+    const handleSetConnected = (item) => {
+        setWashingTypeConnected(prevSelectedRoles =>
+            prevSelectedRoles.filter(role => role !== item)
+        );
+    };
+
+    const handleSetIncluded = (item) => {
+        setWashingTypeIncluded(prevSelectedRoles =>
+            prevSelectedRoles.filter(role => role !== item)
+        );
+    };
+
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница изменения информации об услуге</p>
-            <p style={smallInputStyle}>Цена услуг и время их выполнения на сайте и в приложении берётся из базы данных,
-                если эту информацию необходимо обновить, то вы можете это сделать на этой странице</p>
+            <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления новой услуги</p>
+            <p style={smallInputStyle}>Вся информация о новой услуге появится в базе данных</p>
 
-            <p style={inputStyle}>Выберите услугу, информацию о которой хотите поменять</p>
-            <SelectPicker
-                data={options}
-                groupBy="type"
-                style={{
-                    width: '500px', justifyContent: 'center',
-                    margin: '25px auto 0', WebkitTextFillColor: "#000000",
-                    alignItems: 'center', display: 'flex',
-                }}
-                value={orderName}
-                onSelect={handleOrderChange}
+            <p style={{
+                fontWeight: 'bold', display: 'flex',
+                fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
+            }}>Выберите тип услуги</p>
+            <InputPicker
+                data={serviceTypesArray}
+                value={serviceType}
+                onChange={setServiceType}
+                style={{...styles, WebkitTextFillColor: "#000000"}}
+                menuStyle={{fontSize: "17px"}}
             />
+
+            <InputField
+                label='Название услуги'
+                id='orderName'
+                value={orderName}
+                inputStyle={inputStyle}
+                onChange={setOrderName}
+            />
+
             <Form onSubmit={handleSubmit}>
                 <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
-                    Посмотреть цену для различных видов шин (доступно только для заказов шиномонтажа)
+                    Написать цену для различных видов шин (необходимо только для шиномонтажа)
                 </Button>
                 <Modal show={showModal}
                        onHide={handleCloseModal}
@@ -373,7 +330,7 @@ const ChangeServiceInfo = () => {
                     </Modal.Footer>
                 </Modal>
                 <Button className='full-width' variant='secondary' onClick={handleOpenModalB}>
-                    Посмотреть врем выполнения для различных размеров колёс (доступно только для заказов шиномонтажа)
+                    Написать врем выполнения для различных размеров колёс (необходимо только для шиномонтажа)
                 </Button>
                 <Modal show={showModalB}
                        onHide={handleCloseModalB}
@@ -447,6 +404,63 @@ const ChangeServiceInfo = () => {
                     inputStyle={inputStyle}
                     onChange={setTimeThirdType}
                 />
+
+                <p style={{
+                    fontWeight: 'bold', display: 'flex',
+                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
+                }}>Выберите услугу, в которую она включена</p>
+                <p style={smallInputStyle}>Например "Мойка кузова 2 фазы без протирки" включена в Стандарт</p>
+
+                <TagPicker data={washingTypesArray}
+                           block
+                           onChange={value => setWashingTypeIncluded(value)}
+                           onClose={handleSetIncluded}
+                           style={{
+                               width: '500px',
+                               display: 'block',
+                               marginBottom: 10,
+                               marginLeft: 'auto',
+                               marginRight: 'auto',
+                               marginTop: 10,
+                               WebkitTextFillColor: "#000000"
+                           }}
+                />
+
+                <p style={{
+                    fontWeight: 'bold', display: 'flex',
+                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
+                }}>Выберите услугу, к которой она идёт как дополнительная</p>
+                <p style={smallInputStyle}>Например "Чернение шин 4" можно взять вместе со Стандартной мойкой</p>
+
+                <TagPicker data={washingTypesArray}
+                           block
+                           onChange={value => setWashingTypeConnected(value)}
+                           onClose={handleSetConnected}
+                           style={{
+                               width: '500px',
+                               display: 'block',
+                               marginBottom: 10,
+                               marginLeft: 'auto',
+                               marginRight: 'auto',
+                               marginTop: 10,
+                               WebkitTextFillColor: "#000000"
+                           }}
+                />
+
+                <p style={{
+                    fontWeight: 'bold', display: 'flex',
+                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '10px'
+                }}>Выберите роль услуги</p>
+                <p style={smallInputStyle}>Например "Турбо сушка кузова" имеют роль "дополнительная"</p>
+
+                <InputPicker
+                    data={rolesTypesArray}
+                    value={role}
+                    onChange={setRole}
+                    style={{...stylesUnderButton, WebkitTextFillColor: "#000000"}}
+                    menuStyle={{fontSize: "14px"}}
+                />
+
                 {showConfirmation && (
                     <div className='confirmation-container'>
                         <div className='confirmation-message'>
@@ -472,9 +486,9 @@ const ChangeServiceInfo = () => {
                         variant='primary'
                         type='submit'
                         disabled={isSubmitting || Date.now() < submitTime + 4000}
-                        style={{marginBottom: '20px', marginTop: '20px'}}
+                        style={{marginBottom: '40px', marginTop: '20px'}}
                     >
-                        {isSubmitting ? 'Обработка запроса...' : 'Изменить информацию'}
+                        {isSubmitting ? 'Обработка запроса...' : 'Добавить новую услугу'}
                     </Button>
                 </div>
             </Form>
@@ -482,4 +496,4 @@ const ChangeServiceInfo = () => {
     );
 };
 
-export default ChangeServiceInfo;
+export default AddNewService;

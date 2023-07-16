@@ -17,6 +17,12 @@ export const getServiceInfo = async (orderName, orderType) => {
     return await response.data;
 };
 
+export const deleteOrderById = async (orderId) => {
+    const response = await $host.delete('/api/orders/deleteOrder?orderId='
+        + encodeURIComponent(orderId));
+    return await response.data;
+};
+
 export const getAllWashingOrders = async () => {
     const response = await $host.get('/api/orders/getAllWashingOrders');
     return await response.data;
@@ -32,10 +38,59 @@ export const getActualTireOrders = async () => {
     return await response.data;
 };
 
-export const getTableOrders = async (startTime, endTime) => {
-    const {data: {orders}} = await $host.post('api/orders/getBookedTimeInOneDay', {startTime, endTime});
+export const getTableOrdersInOneDay = async (startTime, endTime) => {
+    const {data: {orders}} = await $host.get('/api/orders/getBookedTimeInOneDay?startTime='
+        + encodeURIComponent(startTime) + '&endTime=' + encodeURIComponent(endTime));
+    return await orders;
+};
+
+export const getNotMadeOrders = async () => {
+    const {data: {orders}} = await $host.get('api/orders/getNotMadeOrders');
     return orders;
 };
+
+export const createNewService = async (serviceType, orderName, priceFirstType, priceSecondType, priceThirdType,
+                                       timeFirstType, timeSecondType, timeThirdType,
+                                       price_r_13, price_r_14, price_r_15, price_r_16, price_r_17,
+                                       price_r_18, price_r_19, price_r_20, price_r_21, price_r_22,
+                                       time_r_13, time_r_14, time_r_15, time_r_16, time_r_17,
+                                       time_r_18, time_r_19, time_r_20, time_r_21, time_r_22, role, includedIn) => {
+    const requestBody = {
+        serviceType: serviceType,
+        name: orderName,
+        priceFirstType: priceFirstType,
+        priceSecondType: priceSecondType,
+        priceThirdType: priceThirdType,
+        timeFirstType: timeFirstType,
+        timeSecondType: timeSecondType,
+        timeThirdType: timeThirdType,
+        price_r_13: price_r_13,
+        price_r_14: price_r_14,
+        price_r_15: price_r_15,
+        price_r_16: price_r_16,
+        price_r_17: price_r_17,
+        price_r_18: price_r_18,
+        price_r_19: price_r_19,
+        price_r_20: price_r_20,
+        price_r_21: price_r_21,
+        price_r_22: price_r_22,
+        time_r_13: time_r_13,
+        time_r_14: time_r_14,
+        time_r_15: time_r_15,
+        time_r_16: time_r_16,
+        time_r_17: time_r_17,
+        time_r_18: time_r_18,
+        time_r_19: time_r_19,
+        time_r_20: time_r_20,
+        time_r_21: time_r_21,
+        time_r_22: time_r_22,
+        role: role,
+        includedIn: includedIn
+    };
+    const response = await $authHost.post('/api/admin/createNewService', requestBody);
+    return response.data;
+};
+
 
 export const createTireOrder = async (orders, userContacts, wheelR, startTime,
                                       endTime, administrator, specialist, boxNumber,
@@ -61,7 +116,7 @@ export const createTireOrder = async (orders, userContacts, wheelR, startTime,
 
 
 export const updateOrderInfo = async (orderId, userPhone, orderType,
-                                      price,wheelR,
+                                      price, wheelR,
                                       startTime, administrator, autoNumber,
                                       autoType, specialist, boxNumber, bonuses,
                                       comments, executed, endTime) => {
@@ -81,7 +136,6 @@ export const updateOrderInfo = async (orderId, userPhone, orderType,
         price: price,
         executed: executed
     };
-    console.log("executed: " + executed)
     const response = await $host.put('api/orders/updateOrderInfo', requestBody);
     return response.data;
 };
@@ -107,8 +161,8 @@ export const createWashingOrder = async (orders, userContacts, startTime,
     return response.data;
 };
 
-export const updateWashingOrder = async (priceFirstType, priceSecondType, priceThirdType,
-                                      timeFirstType, timeSecondType, timeThirdType, orderName) => {
+export const updateWashingService = async (priceFirstType, priceSecondType, priceThirdType,
+                                           timeFirstType, timeSecondType, timeThirdType, orderName) => {
     const requestBody = {
         name: orderName,
         priceFirstType: priceFirstType,
@@ -118,13 +172,13 @@ export const updateWashingOrder = async (priceFirstType, priceSecondType, priceT
         timeSecondType: timeSecondType,
         timeThirdType: timeThirdType,
     };
-    const response = await $authHost.put('/api/admin/updateWashingOrder', requestBody);
+    const response = await $authHost.put('/api/admin/updateWashingService', requestBody);
     return response.data;
 };
 
 
-export const updatePolishingOrder = async (priceFirstType, priceSecondType, priceThirdType,
-                                         timeFirstType, timeSecondType, timeThirdType, orderName) => {
+export const updatePolishingService = async (priceFirstType, priceSecondType, priceThirdType,
+                                             timeFirstType, timeSecondType, timeThirdType, orderName) => {
     const requestBody = {
         name: orderName,
         priceFirstType: priceFirstType,
@@ -134,13 +188,15 @@ export const updatePolishingOrder = async (priceFirstType, priceSecondType, pric
         timeSecondType: timeSecondType,
         timeThirdType: timeThirdType,
     };
-    const response = await $authHost.put('/api/admin/updatePolishingOrder', requestBody);
+    const response = await $authHost.put('/api/admin/updatePolishingService', requestBody);
     return response.data;
 };
 
 
-export const updateTireOrder = async (price_r_13, price_r_14, price_r_15, price_r_16, price_r_17,
-                                      price_r_18,price_r_19,price_r_20,price_r_21,price_r_22, orderName) => {
+export const updateTireService = async (price_r_13, price_r_14, price_r_15, price_r_16, price_r_17,
+                                        price_r_18, price_r_19, price_r_20, price_r_21, price_r_22,
+                                        time_r_13, time_r_14, time_r_15, time_r_16, time_r_17,
+                                        time_r_18, time_r_19, time_r_20, time_r_21, time_r_22, orderName) => {
     const requestBody = {
         name: orderName,
         price_r_13: price_r_13,
@@ -152,16 +208,26 @@ export const updateTireOrder = async (price_r_13, price_r_14, price_r_15, price_
         price_r_19: price_r_19,
         price_r_20: price_r_20,
         price_r_21: price_r_21,
-        price_r_22: price_r_22
+        price_r_22: price_r_22,
+        time_r_13: time_r_13,
+        time_r_14: time_r_14,
+        time_r_15: time_r_15,
+        time_r_16: time_r_16,
+        time_r_17: time_r_17,
+        time_r_18: time_r_18,
+        time_r_19: time_r_19,
+        time_r_20: time_r_20,
+        time_r_21: time_r_21,
+        time_r_22: time_r_22
     };
-    const response = await $authHost.put('/api/admin/updateTireOrder', requestBody);
+    const response = await $authHost.put('/api/admin/updateTireService', requestBody);
     return response.data;
 };
 
 
 export const createPolishingOrder = async (orders, userContacts, startTime,
-                                         endTime, administrator, specialist, boxNumber,
-                                         bonuses, comments, autoNumber, autoType, price) => {
+                                           endTime, administrator, specialist, boxNumber,
+                                           bonuses, comments, autoNumber, autoType, price) => {
     const requestBody = {
         orders: orders,
         userContacts: userContacts,
@@ -180,18 +246,7 @@ export const createPolishingOrder = async (orders, userContacts, startTime,
     return response.data;
 };
 
-export const getPrice = async (orders, bodyType,orderType, wheelR) => {
-    const requestBody = {
-        orders: orders,
-        bodyType: bodyType,
-        orderType: orderType,
-        wheelR: wheelR
-    };
-    const response = await $host.post('api/orders/getPriceAndTime', requestBody);
-    return response.data;
-};
-
-export const getPriceAndFreeTime = async (orders, bodyType,orderType, wheelR, startTime, endTime) => {
+export const getPriceAndFreeTime = async (orders, bodyType, orderType, wheelR, startTime, endTime) => {
     const requestBody = {
         orders: orders,
         bodyType: bodyType,
@@ -200,7 +255,7 @@ export const getPriceAndFreeTime = async (orders, bodyType,orderType, wheelR, st
         startTime: startTime,
         endTime: endTime
     };
-    const response = await $host.post('api/orders/getPriceAndTimeForSite', requestBody);
+    const response = await $host.post('api/orders/getPriceAndEndTime', requestBody);
     return response.data;
 };
 

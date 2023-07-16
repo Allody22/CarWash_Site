@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
-import {DatePicker} from 'rsuite';
+import {DatePicker, Notification, useToaster} from 'rsuite';
 
 import addDays from 'date-fns/addDays';
 import {Divider} from 'rsuite';
@@ -40,7 +40,7 @@ const stylesForInput = {
 
 
 const wheelSizeArray = [
-    'R13', 'R14', 'R15','R16','R17','R18','R19','R20','R21','R22'].map(item => ({label: item, value: item}));
+    'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
 
 const CreatingTireOrder = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +72,11 @@ const CreatingTireOrder = () => {
 
     const [requestEndTime, setRequestEndTime] = useState(new Date());
     const [requestStartTime, setRequestStartTime] = useState(new Date());
+
+    const [errorResponse, setErrorResponse] = useState();
+    const [errorFlag, setErrorFlag] = useState(false);
+    const [successResponse, setSuccessResponse] = useState();
+    const toaster = useToaster();
 
     const [carNumber, setCarNumber] = useState('');
     const [wheelR, setWheelR] = useState('');
@@ -135,10 +140,8 @@ const CreatingTireOrder = () => {
     const handleGetPrice = async (e) => {
         e.preventDefault();
         try {
-            let allOrders = []
-            allOrders = [...selectedItems.map(i => i.replace(/ /g, '_'))];
 
-            const response = await getPriceAndFreeTime(allOrders,
+            const response = await getPriceAndFreeTime(selectedItems.map(i => i.replace(/ /g, '_')),
                 null, "tire", wheelR, start.toISOString(), end.toISOString());
 
             setPrice(response.price);
@@ -192,6 +195,7 @@ const CreatingTireOrder = () => {
                 }
             }
         }
+
         getOrders();
     }, []);
 
@@ -223,6 +227,45 @@ const CreatingTireOrder = () => {
     };
 
 
+    const successMessage = (
+        <Notification
+            type="success"
+            header="Успешно!"
+            closable
+            style={{border: '1px solid black'}}
+        >
+            <div style={{width: 320}}>
+                <p>{successResponse}</p>
+            </div>
+        </Notification>
+    );
+
+    const errorResponseMessage = (
+        <Notification
+            type="error"
+            header="Ошибка!"
+            closable
+            style={{border: '1px solid black'}}
+        >
+            <div style={{width: 320}}>
+                {errorResponse}
+            </div>
+        </Notification>
+    );
+
+    useEffect(() => {
+        if (errorResponse) {
+            toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+        }
+    }, [errorFlag]);
+
+    useEffect(() => {
+        if (successResponse) {
+            toaster.push(successMessage, {placement: "bottomEnd"});
+        }
+    }, [successResponse]);
+
+
     const handleCreateOrder = async (e) => {
         e.preventDefault();
         if (isSubmitting) {
@@ -231,18 +274,34 @@ const CreatingTireOrder = () => {
         setIsSubmitting(true);
         setSubmitTime(Date.now());
         try {
-            let allOrders = []
-            allOrders = [...selectedItems.map(i => i.replace(/ /g, '_'))];
 
-            const response = await createTireOrder(allOrders, userContacts, wheelR, requestStartTime.toISOString(),
-                requestEndTime.toISOString(),
+            const response = await createTireOrder(selectedItems.map(i => i.replace(/ /g, '_')), userContacts,
+                wheelR, requestStartTime.toISOString(), requestEndTime.toISOString(),
                 administrator, specialist, boxNumber, bonuses, comments, carNumber, null, price);
+            setSuccessResponse(null)
 
+            const ordersForResponse = response.orders.map(order => `"${order}"`);
+            const ordersSentence = ordersForResponse.join(" и ");
+
+            let formattedStartTime = new Date(response.startTime).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            let formattedEndTime = new Date(response.endTime).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+
+            const sentence = `Заказы ${ordersSentence} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
+            setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
-                alert(error.response.data.message)
+                setErrorResponse(error.response.data.message)
+                setErrorFlag(flag => !flag)
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                setErrorResponse("Системная ошибка, проверьте правильность " +
+                    "введённой информации и попробуйте еще раз")
+                setErrorFlag(flag => !flag)
             }
         } finally {
             setTimeout(() => setIsSubmitting(false), 4000);
@@ -275,7 +334,6 @@ const CreatingTireOrder = () => {
     };
 
 
-
     const predefinedBottomRanges = [
         {
             label: 'Сегодня',
@@ -292,10 +350,11 @@ const CreatingTireOrder = () => {
     ];
     return (
         <>
-            <p style={{...inputStyle,marginTop:'15px'}}>Страница добавления заказов на шиномонтаж</p>
+            <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления заказов на шиномонтаж</p>
             <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
                 на шиномонтаж из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, диаметр колёс и набор услуг</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, диаметр колёс и
+                набор услуг</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
@@ -406,7 +465,7 @@ const CreatingTireOrder = () => {
             <p style={inputStyle}>Расписание с доступным временем</p>
 
             <InputPicker
-                data = {stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({ label: item, value: item }))}
+                data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
                 style={{
                     width: 500,
                     marginLeft: 'auto',
@@ -428,19 +487,19 @@ const CreatingTireOrder = () => {
                     label='Номер телефона клиента:'
                     id='name'
                     value={userContacts}
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     onChange={setUserContacts}
                 />
                 <InputField
                     label='Номер автомобиля:'
                     id='carNumber'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={carNumber}
                     onChange={setCarNumber}
                 />
                 <InputField
                     label='Специалист:'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
@@ -448,21 +507,21 @@ const CreatingTireOrder = () => {
                 <InputField
                     label='Администратор:'
                     id='administrator'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={administrator}
                     onChange={setAdministrator}
                 />
                 <InputField
                     label='Количество использованных бонусов:'
                     id='bonuses'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={bonuses}
                     onChange={setBonuses}
                 />
                 <InputField
                     label='Комментарии:'
                     id='comments'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={comments}
                     onChange={setComments}
                 />
@@ -471,7 +530,7 @@ const CreatingTireOrder = () => {
                         className='btn-submit'
                         variant='primary'
                         type='submit'
-                        disabled={isSubmitting || Date.now() < submitTime + 4000}
+                        disabled={isSubmitting || Date.now() < submitTime + 2000}
                         style={{marginBottom: '20px', marginTop: '20px'}}>
                         {isSubmitting ? 'Обработка заказа...' : 'Сделать заказ'}
                     </Button>

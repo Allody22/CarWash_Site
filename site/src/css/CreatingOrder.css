@@ -23,6 +23,31 @@
     border-color: #007bff;
 }
 
+.btn-delete {
+    display: block;
+    width: 75%;
+    text-align: center;
+    margin: 0 auto; /* центрируем блок по горизонтали */
+    background-color: #f50b04;
+    border-color: #f50b04;
+}
+
+.btn-delete:hover {
+    background-color: #b41313;
+    border-color: #b41313;
+}
+
+.btn-delete:focus,
+.btn-delete:active:focus,
+.btn-delete.active:focus,
+.btn-delete.focus,
+.btn-delete:active.focus,
+.btn-delete.active.focus {
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: transparent !important;
+}
+
 .selected-items {
     text-align: center; /* центрируем элементы по горизонтали */
 }

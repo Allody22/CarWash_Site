@@ -9,12 +9,14 @@ import dataBase from "../assets/dataBase.png"
 import updateOrderInfo from "../assets/updateOrderInfo.png"
 import updateClientInfo from "../assets/updatingClientInfo.png"
 import updateServiceInfo from "../assets/updateServiceInfo.png"
+import addNewService from "../assets/addService.png"
+
 
 
 
 import {
     CHANGE_SERVICE_INFO,
-    CHANGE_USERINFO_ROUTE,
+    CHANGE_USERINFO_ROUTE, CREATE_NEW_SERVICE,
     CREATE_POLISHING_ORDER_ROUTE, CREATE_TIRE_ORDER_ROUTE,
     CREATE_WASHING_ORDER_ROUTE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE
 } from "../utils/consts";
@@ -110,7 +112,19 @@ const Admin = () => {
                     Изменить информацию об услуге
                 </Button>
                 <Image src={updateServiceInfo} fluid style={verySmallImageStyle}/>
+            </div>
 
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginTop: '10px', marginBottom:'20px'}}>
+                <Button
+                    variant={"outline-dark"}
+                    className="mt-4 p-2 flex-grow-1"
+                    onClick={() => history.push(CREATE_NEW_SERVICE)}
+                    style={{marginTop: '10px'}}
+                >
+                    Добавить новую услугу
+                </Button>
+                <Image src={addNewService} fluid style={verySmallImageStyle}/>
             </div>
 
         </Container>
