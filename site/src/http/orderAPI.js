@@ -1,51 +1,72 @@
-import {$authHost, $host} from "./index";
+import {$authHost} from "./index";
 
 
 export const getOrderInfo = async (orderId) => {
-    const response = await $host.get('/api/orders/getOrderInfo?orderId=' + orderId);
+    const response = await $authHost.get('/api/orders/management/getOrderInfo?orderId=' + orderId);
     return await response.data;
 };
 
 export const getActualWashingOrders = async (orderName) => {
-    const response = await $host.get('/api/orders/getActualWashingOrders?orderName=' + encodeURIComponent(orderName));
+    const response = await $authHost.get('/api/orders/management/getActualWashingOrders?orderName=' + encodeURIComponent(orderName));
     return await response.data;
 };
 
 export const getServiceInfo = async (orderName, orderType) => {
-    const response = await $host.get('/api/orders/getServiceInfo?orderName='
+    const response = await $authHost.get('/api/orders/management/getServiceInfo?orderName='
         + encodeURIComponent(orderName) + '&orderType=' + encodeURIComponent(orderType));
     return await response.data;
 };
 
 export const deleteOrderById = async (orderId) => {
-    const response = await $host.delete('/api/orders/deleteOrder?orderId='
+    const response = await $authHost.post('/api/orders/management/deleteOrder?orderId='
         + encodeURIComponent(orderId));
     return await response.data;
 };
 
+export const getAllWashingServicesWithPriceAndTime = async () => {
+    const response = await $authHost.get('/api/orders/management/getAllWashingServicesWithPriceAndTime');
+    return await response.data;
+};
+
+export const getAllPolishingServicesWithPriceAndTime = async () => {
+    const response = await $authHost.get('/api/orders/management/getAllPolishingServicesWithPriceAndTime');
+    return await response.data;
+};
+
+export const getAllTireServicesWithPriceAndTime = async () => {
+    const response = await $authHost.get('/api/orders/management/getAllTireServicesWithPriceAndTime');
+    return await response.data;
+};
+
 export const getAllWashingOrders = async () => {
-    const response = await $host.get('/api/orders/getAllWashingOrders');
+    const response = await $authHost.get('/api/orders/management/getAllWashingOrders');
     return await response.data;
 };
 
 export const getActualPolishingOrders = async () => {
-    const response = await $host.get('/api/orders/getActualPolishingOrders');
+    const response = await $authHost.get('/api/orders/management/getActualPolishingOrders');
     return await response.data;
 };
 
 export const getActualTireOrders = async () => {
-    const response = await $host.get('/api/orders/getActualTireOrders');
+    const response = await $authHost.get('/api/orders/management/getActualTireOrders');
     return await response.data;
 };
 
-export const getTableOrdersInOneDay = async (startTime, endTime) => {
-    const {data: {orders}} = await $host.get('/api/orders/getBookedTimeInOneDay?startTime='
-        + encodeURIComponent(startTime) + '&endTime=' + encodeURIComponent(endTime));
+export const getOrdersBookedInOneDay = async (startTime, endTime, flag) => {
+    const {data: {orders}} = await $authHost.get('/api/orders/management/getBookedTimeInOneDay?startTime='
+        + encodeURIComponent(startTime) + '&endTime=' + encodeURIComponent(endTime) + "&includeCancelled=" + flag );
     return await orders;
 };
 
-export const getNotMadeOrders = async () => {
-    const {data: {orders}} = await $host.get('api/orders/getNotMadeOrders');
+export const getOrdersCreatedInOneDay = async (startTime, endTime, flag) => {
+    const {data: {orders}} = await $authHost.get('/api/orders/management/getOrderCreatedAt?startTime='
+        + encodeURIComponent(startTime) + '&endTime=' + encodeURIComponent(endTime) + "&includeCancelled=" + flag);
+    return await orders;
+};
+
+export const getNotMadeOrders = async (flag) => {
+    const {data: {orders}} = await $authHost.get('api/orders/management/getNotMadeOrders?includeCancelled=' + flag);
     return orders;
 };
 
@@ -87,42 +108,18 @@ export const createNewService = async (serviceType, orderName, priceFirstType, p
         role: role,
         includedIn: includedIn
     };
-    const response = await $authHost.post('/api/admin/createNewService', requestBody);
+    const response = await $authHost.post('/api/admin/services/createNewService', requestBody);
     return response.data;
 };
 
 
 export const createTireOrder = async (orders, userContacts, wheelR, startTime,
                                       endTime, administrator, specialist, boxNumber,
-                                      bonuses, comments, autoNumber, autoType, price) => {
+                                      bonuses, comments, autoNumber,
+                                      autoType, price, currentStatus) => {
     const requestBody = {
         orders: orders,
         userContacts: userContacts,
-        wheelR: wheelR,
-        startTime: startTime,
-        endTime: endTime,
-        administrator: administrator,
-        specialist: specialist,
-        boxNumber: boxNumber,
-        bonuses: bonuses,
-        comments: comments,
-        autoNumber: autoNumber,
-        autoType: autoType,
-        price: price
-    };
-    const response = await $authHost.post('api/orders/createTireOrder', requestBody);
-    return response.data;
-};
-
-
-export const updateOrderInfo = async (orderId, userPhone, orderType,
-                                      price, wheelR,
-                                      startTime, administrator, autoNumber,
-                                      autoType, specialist, boxNumber, bonuses,
-                                      comments, executed, endTime) => {
-    const requestBody = {
-        orderId: orderId,
-        userPhone: userPhone,
         wheelR: wheelR,
         startTime: startTime,
         endTime: endTime,
@@ -134,15 +131,45 @@ export const updateOrderInfo = async (orderId, userPhone, orderType,
         autoNumber: autoNumber,
         autoType: autoType,
         price: price,
-        executed: executed
+        currentStatus: currentStatus
     };
-    const response = await $host.put('api/orders/updateOrderInfo', requestBody);
+    const response = await $authHost.post('api/orders/new/createTireOrder', requestBody);
+    return response.data;
+};
+
+
+export const updateOrderInfo = async (orderId, userPhone, orderType,
+                                      price, wheelR,
+                                      startTime, administrator, autoNumber,
+                                      autoType, specialist, boxNumber, bonuses,
+                                      comments, executed, endTime, orders, currentStatus) => {
+    const requestBody = {
+        orderId: orderId,
+        userPhone: userPhone,
+        orderType: orderType,
+        wheelR: wheelR,
+        startTime: startTime,
+        endTime: endTime,
+        administrator: administrator,
+        specialist: specialist,
+        boxNumber: boxNumber,
+        bonuses: bonuses,
+        comments: comments,
+        autoNumber: autoNumber,
+        autoType: autoType,
+        price: price,
+        executed: executed,
+        orders: orders,
+        currentStatus: currentStatus
+    };
+    const response = await  $authHost.post('api/orders/management/updateOrderInfo', requestBody);
     return response.data;
 };
 
 export const createWashingOrder = async (orders, userContacts, startTime,
                                          endTime, administrator, specialist, boxNumber,
-                                         bonuses, comments, autoNumber, autoType, price) => {
+                                         bonuses, comments, autoNumber, autoType,
+                                         price, currentStatus) => {
     const requestBody = {
         orders: orders,
         userContacts: userContacts,
@@ -155,9 +182,10 @@ export const createWashingOrder = async (orders, userContacts, startTime,
         comments: comments,
         autoNumber: autoNumber,
         autoType: autoType,
-        price: price
+        price: price,
+        currentStatus: currentStatus
     };
-    const response = await $authHost.post('api/orders/createWashingOrder', requestBody);
+    const response = await $authHost.post('api/orders/new/createWashingOrder', requestBody);
     return response.data;
 };
 
@@ -172,7 +200,7 @@ export const updateWashingService = async (priceFirstType, priceSecondType, pric
         timeSecondType: timeSecondType,
         timeThirdType: timeThirdType,
     };
-    const response = await $authHost.put('/api/admin/updateWashingService', requestBody);
+    const response = await $authHost.put('/api/admin/services/updateWashingService', requestBody);
     return response.data;
 };
 
@@ -188,7 +216,7 @@ export const updatePolishingService = async (priceFirstType, priceSecondType, pr
         timeSecondType: timeSecondType,
         timeThirdType: timeThirdType,
     };
-    const response = await $authHost.put('/api/admin/updatePolishingService', requestBody);
+    const response = await $authHost.put('/api/admin/services/updatePolishingService', requestBody);
     return response.data;
 };
 
@@ -220,14 +248,14 @@ export const updateTireService = async (price_r_13, price_r_14, price_r_15, pric
         time_r_21: time_r_21,
         time_r_22: time_r_22
     };
-    const response = await $authHost.put('/api/admin/updateTireService', requestBody);
+    const response = await $authHost.put('/api/admin/services/updateTireService', requestBody);
     return response.data;
 };
 
 
 export const createPolishingOrder = async (orders, userContacts, startTime,
                                            endTime, administrator, specialist, boxNumber,
-                                           bonuses, comments, autoNumber, autoType, price) => {
+                                           bonuses, comments, autoNumber, autoType, price, currentStatus) => {
     const requestBody = {
         orders: orders,
         userContacts: userContacts,
@@ -240,9 +268,10 @@ export const createPolishingOrder = async (orders, userContacts, startTime,
         comments: comments,
         autoNumber: autoNumber,
         autoType: autoType,
-        price: price
+        price: price,
+        currentStatus: currentStatus
     };
-    const response = await $authHost.post('api/orders/createPolishingOrder', requestBody);
+    const response = await $authHost.post('api/orders/new/createPolishingOrder', requestBody);
     return response.data;
 };
 
@@ -255,7 +284,7 @@ export const getPriceAndFreeTime = async (orders, bodyType, orderType, wheelR, s
         startTime: startTime,
         endTime: endTime
     };
-    const response = await $host.post('api/orders/getPriceAndEndTime', requestBody);
+    const response = await $authHost.post('api/orders/management/getPriceAndEndTime', requestBody);
     return response.data;
 };
 
@@ -265,6 +294,6 @@ export const getBookedOrdersInTimeInterval = async (startTime, endTime) => {
         startTime: startTime,
         endTime: endTime
     };
-    const response = await $host.post('api/orders/getBookedTimeInOneDay', requestBody);
+    const response = await $authHost.post('api/orders/management/getBookedTimeInOneDay', requestBody);
     return response.data;
 };

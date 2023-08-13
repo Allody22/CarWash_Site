@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {Container, Form} from "react-bootstrap";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -8,10 +8,12 @@ import {ADMIN_ROUTE} from "../utils/consts";
 import {login} from "../http/userAPI";
 import {observer} from "mobx-react-lite";
 import {Context} from "../index";
+import socketStore from "../store/SocketStore";
 
 const Auth = observer(() => {
-    const {user} = useContext(Context)
     useLocation();
+
+    const {user} = useContext(Context)
     const history = useHistory()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -22,11 +24,13 @@ const Auth = observer(() => {
             user.setUser(data)
             user.setIsAuth(true)
             history.push(ADMIN_ROUTE)
+            socketStore.connectAndSubscribe();
         } catch (error) {
             console.log(error)
             alert('Произошла ошибка. Пожалуйста, повторите попытку.');
         }
     };
+
 
     return (
         <Container
@@ -61,12 +65,13 @@ const Auth = observer(() => {
 
             </Card>
             <div
+
                 style={{ display:'flex',alignItems: "center", justifyContent: "center",
-                textAlign: "left", fontFamily: "Arial, sans-serif",
-                position: "absolute", bottom: "10px", width: "90%",
-                height: "70px", backgroundColor: "white", color: "black",
-                border: "1px solid black", boxShadow: "2px 2px 5px rgba(0, 0, 0, 0.2)", padding: "10px",
-            }}>
+                    textAlign: "left", fontFamily: "Arial, sans-serif",
+                    position: "absolute", bottom: "10px", width: "90%",
+                    height: "70px", backgroundColor: "white", color: "black",
+                    border: "1px solid black", boxShadow: "2px 2px 5px rgba(0, 0, 0, 0.2)", padding: "10px",
+                }}>
                 Если вы считаете, что у вас должны быть права, чтобы пользоваться этой страницей, но вы почему-то не можете на неё зайти,
                 то, вам нужно обратиться к своему начальнику, чтобы он дал вам доступ. <br />
                 Если вы считаете, что какие-то кнопки неправильно работают, вам не хватает функционала

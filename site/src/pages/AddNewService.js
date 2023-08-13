@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import {
     InputPicker,
-    Notification, TagPicker,
+    Notification, TagPicker, toaster,
     useToaster,
 } from 'rsuite';
 import '../css/CreatingOrder.css';
@@ -19,6 +19,11 @@ import {
 import orderTypeMapFromRussian from "../model/map/OrderTypeMapFromRussian";
 import connectedServiceMap from "../model/map/ConnectedServiceMap";
 import includedServiceMap from "../model/map/IncludedServiceMap";
+import {observer} from "mobx-react-lite";
+import socketStore from "../store/SocketStore";
+import {BrowserRouter as Router, Link, useHistory} from "react-router-dom";
+import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
+import {format, parseISO} from "date-fns";
 
 const smallInputStyle = {
     display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
@@ -57,7 +62,7 @@ const stylesUnderButton = {
 };
 
 
-const AddNewService = () => {
+const AddNewService = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
@@ -94,6 +99,37 @@ const AddNewService = () => {
     const [wheelSizeAndTime, setWheelSizeAndTime] = useState([{wheelR: null, time: null}]);
 
 
+    const newOrderMessage = (
+        <Router>
+            <Notification
+                type="info"
+                header="Новый заказ!"
+                closable
+                timeout={null}
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    {socketStore.message && (
+                        <>
+                            <div style={{textAlign: 'left'}}>
+                                <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
+                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Notification>
+        </Router>
+    );
+
+    useEffect(() => {
+        if (socketStore.message && !socketStore.isAlreadyShown) {
+            toaster.push(newOrderMessage, {placement: "bottomEnd"});
+            socketStore.isAlreadyShown = true;
+        }
+    }, [socketStore.message]);
+
     useEffect(() => {
         async function getAllOrders() {
             try {
@@ -106,7 +142,6 @@ const AddNewService = () => {
                         level: `${i}`,
                         price: 0,
                     });
-
                     time.push({
                         level: `${i}`,
                         time: 0,
@@ -187,7 +222,6 @@ const AddNewService = () => {
         >
             <div style={{width: 320}}>
                 <p>{successResponse}</p>
-                <p>Вы успешно обновили информацию в базе данных.</p>
             </div>
         </Notification>
     );
@@ -240,7 +274,7 @@ const AddNewService = () => {
                     getTimeByWheelR('21'), getTimeByWheelR('22'),
                     orderTypeMapFromRussian[role], [...washingTypeIncludedEnglish, ...washingTypeConnectedEnglish])
                 setSuccessResponse(null)
-                setSuccessResponse(response.message)
+                setSuccessResponse("В базе данных появилась услуга '" + (response.name).replaceAll('_',' ') + "'")
             } catch
                 (error) {
                 if (error.response) {
@@ -494,6 +528,6 @@ const AddNewService = () => {
             </Form>
         </>
     );
-};
+});
 
 export default AddNewService;

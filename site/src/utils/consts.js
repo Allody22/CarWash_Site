@@ -10,7 +10,7 @@ export const CREATE_TIRE_ORDER_ROUTE = '/createTireOrder'
 
 export const ORDERS_TABLE_ROUTE = '/ordersTable'
 
-export const CHANGE_USERINFO_ROUTE = '/changeUserInfo'
+export const CHANGE_USERINFO_ROUTE = '/changeUserInfo/:username'
 
 export const UPDATE_ORDER_INFO_ROUTE = `/updateOrderInfo/:id`
 

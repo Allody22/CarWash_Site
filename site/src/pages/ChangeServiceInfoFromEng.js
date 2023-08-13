@@ -1,8 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import {
-    Notification,
-    useToaster,
+    Notification, toaster, useToaster,
 } from 'rsuite';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
@@ -23,6 +22,11 @@ import {
     updateTireService,
     updateWashingService,
 } from "../http/orderAPI";
+import {observer} from "mobx-react-lite";
+import socketStore from "../store/SocketStore";
+import {BrowserRouter as Router, Link, useHistory} from "react-router-dom";
+import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
+import {format, parseISO} from "date-fns";
 
 const smallInputStyle = {
     display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
@@ -32,14 +36,14 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
-const ChangeServiceInfo = () => {
+const ChangeServiceInfoFromEng = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
 
     const [showModalB, setShowModalB] = useState(false);
 
-
+    const history = useHistory();
     const [orderName, setOrderName] = useState(null);
 
 
@@ -72,6 +76,39 @@ const ChangeServiceInfo = () => {
             type: item.type
         }))
         .flat();
+
+    const newOrderMessage = (
+        <Router>
+            <Notification
+                type="info"
+                header="Новый заказ!"
+                closable
+                timeout={null}
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    {socketStore.message && (
+                        <>
+                            <div style={{textAlign: 'left'}}>
+                                <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
+                                <p>Время начала
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Notification>
+        </Router>
+    );
+
+    useEffect(() => {
+        if (socketStore.message && !socketStore.isAlreadyShown) {
+            toaster.push(newOrderMessage, {placement: "bottomEnd"});
+            socketStore.isAlreadyShown = true;
+        }
+    }, [socketStore.message]);
 
 
     useEffect(() => {
@@ -480,6 +517,6 @@ const ChangeServiceInfo = () => {
             </Form>
         </>
     );
-};
+});
 
-export default ChangeServiceInfo;
+export default ChangeServiceInfoFromEng;

@@ -14,9 +14,43 @@ import Modal from "react-bootstrap/Modal";
 import {InputNumber, InputPicker} from 'rsuite';
 import InputField from "../model/InputField";
 import {
-    createWashingOrder, getAllWashingOrders,
+    createWashingOrder, getAllWashingServicesWithPriceAndTime,
     getPriceAndFreeTime,
 } from "../http/orderAPI";
+import socketStore from "../store/SocketStore";
+import {observer} from "mobx-react-lite";
+import {BrowserRouter as Router, useHistory} from "react-router-dom";
+import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
+import {format, parseISO} from "date-fns";
+import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatysMapFromRus";
+
+const orderStatusArray = [
+    "Отменён",
+    "Не оплачен и не сделан",
+    "Оплачен на 5 процентов и не сделан",
+    "Оплачен на 10 процентов и не сделан",
+    "Оплачен на 20 процентов и не сделан",
+    "Оплачен на 30 процентов и не сделан",
+    "Оплачен на 40 процентов и не сделан",
+    "Оплачен на 50 процентов и не сделан",
+    "Оплачен на 60 процентов и не сделан",
+    "Оплачен на 70 процентов и не сделан",
+    "Оплачен на 80 процентов и не сделан",
+    "Оплачен на 90 процентов и не сделан",
+    "Полностью оплачен и не сделан",
+    "Не оплачен, но сделан",
+    "Оплачен на 5 процентов и сделан",
+    "Оплачен на 10 процентов и сделан",
+    "Оплачен на 20 процентов и сделан",
+    "Оплачен на 30 процентов и сделан",
+    "Оплачен на 40 процентов и сделан",
+    "Оплачен на 50 процентов и сделан",
+    "Оплачен на 60 процентов и сделан",
+    "Оплачен на 70 процентов и сделан",
+    "Оплачен на 80 процентов и сделан",
+    "Оплачен на 90 процентов и сделан",
+    "Полностью оплачен и сделан"
+].map(item => ({label: item, value: item}));
 
 
 const carTypesArray = [
@@ -44,7 +78,7 @@ const smallInputStyle = {
     display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
-const CreatingWashingOrder = () => {
+const CreatingWashingOrder = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
@@ -53,12 +87,20 @@ const CreatingWashingOrder = () => {
     const [newTime, setNewTime] = useState([{startTime: null, endTime: null, box: 0}]);
 
     const [stringTimeForCurrentDay, setStringTimeForCurrentDay] = useState([]);
+    const [currentStatus, setCurrentStatus] = useState('');
 
 
     const [selectedItems, setSelectedItems] = useState([]);
 
-    const [additionalOrders, setAdditionalOrders] = useState([]);
-    const [mainOrders, setMainOrders] = useState([]);
+    const [mainOrders, setMainOrders] = useState([{
+        name: null, priceFirstType: null,
+        priceSecondType: null, priceThirdType: null, timeFirstType: null, timeSecondType: null, timeThirdType: null
+    }]);
+
+    const [additionalOrders, setAdditionalOrders] = useState([{
+        name: null, priceFirstType: null,
+        priceSecondType: null, priceThirdType: null, timeFirstType: null, timeSecondType: null, timeThirdType: null
+    }]);
 
 
     const [userContacts, setUserContacts] = useState('');
@@ -233,12 +275,22 @@ const CreatingWashingOrder = () => {
 
 
     useEffect(() => {
-        async function getAllOrders() {
+        async function getAllService() {
             try {
-                const response = await getAllWashingOrders();
-                setMainOrders(response.mainOrders.map(item => item.replace(/_/g, ' ')));
-                setAdditionalOrders(response.additionalOrders.map(item => item.replace(/_/g, ' ')));
+                const response = await getAllWashingServicesWithPriceAndTime();
+                const filteredOrdersMain = response.filter(item => item.role === "main").map(item => ({
+                    ...item,
+                    name: item.name.replace(/_/g, ' ')
+                }));
+                setMainOrders(filteredOrdersMain);
 
+                const filteredOrdersAdditional = response.filter(item => item.role === "additional").map(item => ({
+                    ...item,
+                    name: item.name.replace(/_/g, ' ')
+                }));
+
+                setMainOrders(filteredOrdersMain);
+                setAdditionalOrders(filteredOrdersAdditional)
             } catch (error) {
                 if (error.response) {
                     alert(error.response.data.message)
@@ -248,9 +300,41 @@ const CreatingWashingOrder = () => {
             }
         }
 
-        getAllOrders();
+        getAllService();
     }, []);
 
+    const history = useHistory()
+
+    const newOrderMessage = (
+        <Router>
+            <Notification
+                type="info"
+                header="Новый заказ!"
+                closable
+                timeout={null}
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    {socketStore.message && (
+                        <>
+                            <div style={{textAlign: 'left'}}>
+                                <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
+                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Notification>
+        </Router>
+    );
+
+    useEffect(() => {
+        if (socketStore.message && !socketStore.isAlreadyShown) {
+            toaster.push(newOrderMessage, {placement: "bottomEnd"});
+            socketStore.isAlreadyShown = true;
+        }
+    }, [socketStore.message]);
 
     const successMessage = (
         <Notification
@@ -300,11 +384,10 @@ const CreatingWashingOrder = () => {
         setSubmitTime(Date.now());
 
         try {
-
             const response = await createWashingOrder(selectedItems.map(i => i.replace(/ /g, '_')),
-                userContacts, requestStartTime.toISOString(),
-                requestEndTime.toISOString(),
-                administrator, specialist, boxNumber, bonuses, comments, carNumber, carType, price);
+                userContacts, requestStartTime.toISOString(), requestEndTime.toISOString(),
+                administrator, specialist, boxNumber, bonuses, comments,
+                carNumber, carType, price, currentOrderStatusMapFromRus[currentStatus]);
 
             setSuccessResponse(null)
 
@@ -320,7 +403,7 @@ const CreatingWashingOrder = () => {
                 minute: "2-digit",
             });
 
-            const sentence = `Заказы ${ordersSentence} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
+            const sentence = `Заказы ${ordersSentence.replace(/_/g, ' ')} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
             setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
@@ -397,23 +480,34 @@ const CreatingWashingOrder = () => {
                     <Modal.Title>Выберите заказы</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {mainOrders.sort().map(item => (
-                        <div key={item}
-                             style={{
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                                 fontSize: '16px'
-                             }}>
-                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                            <InputNumber
-                                size="sm"
-                                placeholder="sm"
-                                style={stylesForInput}
-                                min={0}
-                                onChange={value => handleItemChange(item, value)}
-                                value={getItemValueByName(item) || 0}
-                            />
+                    {mainOrders.map(item => (
+                        <div key={item.name} style={{
+                            fontSize: '16px', borderBottom: '1px solid lightgray',
+                            paddingBottom: '10px', paddingTop: '10px'
+                        }}>
+                            <div style={{textAlign: 'center'}}>
+                                <span>{item.name}</span>
+                            </div>
+                            <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '7px'}}>
+                                <div>
+                                    <span style={{color: "red"}}>Цены: </span>
+                                    <span>{`${item.priceFirstType} / ${item.priceSecondType} / ${item.priceThirdType}`}</span>
+                                </div>
+                                <div style={{marginLeft: 'auto'}}>
+                                    <span style={{color: "blue"}}>Время: </span>
+                                    <span>{`${item.timeFirstType} / ${item.timeSecondType} / ${item.timeThirdType}`}</span>
+                                </div>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}>
+                                <InputNumber size="sm" placeholder="sm"
+                                             style={Object.assign({}, stylesForInput, {margin: '0 auto',marginTop:'10px'})}
+                                             min={0}
+                                             onChange={value => handleItemChange(item.name, value)}
+                                             value={getItemValueByName(item.name) || 0}/>
+                            </div>
                         </div>
                     ))}
                 </Modal.Body>
@@ -434,23 +528,33 @@ const CreatingWashingOrder = () => {
                     <Modal.Title>Выберите заказы</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {additionalOrders.sort().map(item => (
-                        <div key={item}
-                             style={{
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                                 fontSize: '16px'
-                             }}>
-                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                            <InputNumber
-                                size="sm"
-                                placeholder="sm"
-                                style={stylesForInput}
-                                min={0}
-                                onChange={value => handleItemChange(item, value)}
-                                value={getItemValueByName(item) || 0}
-                            />
+                    {additionalOrders.map(item => (
+                        <div key={item.name} style={{
+                            fontSize: '16px', borderBottom: '1px solid lightgray',
+                            paddingBottom: '10px', paddingTop: '10px'
+                        }}>
+                            <div style={{textAlign: 'center'}}>
+                                <span>{item.name}</span>
+                            </div>
+                            <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '7px'}}>
+                                <div>
+                                    <span style={{color: "red"}}>Цены: </span>
+                                    <span>{`${item.priceFirstType} / ${item.priceSecondType} / ${item.priceThirdType}`}</span>
+                                </div>
+                                <div style={{marginLeft: 'auto'}}>
+                                    <span style={{color: "blue"}}>Время: </span>
+                                    <span>{`${item.timeFirstType} / ${item.timeSecondType} / ${item.timeThirdType}`}</span>
+                                </div>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}>
+                                <InputNumber size="sm" placeholder="sm"
+                                             style={Object.assign({}, stylesForInput, {margin: '0 auto'})} min={0}
+                                             onChange={value => handleItemChange(item.name, value)}
+                                             value={getItemValueByName(item.name) || 0}/>
+                            </div>
                         </div>
                     ))}
                 </Modal.Body>
@@ -505,6 +609,22 @@ const CreatingWashingOrder = () => {
 
             <p style={inputStyle}>Выберите день заказа</p>
             <DatePicker
+                isoWeek
+                locale={{
+                    sunday: 'Вск',
+                    monday: 'Пн',
+                    tuesday: 'Вт',
+                    wednesday: 'Ср',
+                    thursday: 'Чт',
+                    friday: 'Пт',
+                    saturday: 'Сб',
+                    ok: 'OK',
+                    today: 'Сегодня',
+                    yesterday: 'Вчера',
+                    hours: 'Часы',
+                    minutes: 'Минуты',
+                    seconds: 'Секунды'
+                }}
                 format="yyyy-MM-dd"
                 oneTap
                 ranges={predefinedBottomRanges}
@@ -544,10 +664,12 @@ const CreatingWashingOrder = () => {
                     WebkitTextFillColor: "#000000",
                     display: 'flex',
                 }}
-                menuStyle={{fontSize: "17px"}} // ваш класс стилей здесь
+                menuStyle={{fontSize: "17px"}}
                 value={endTime}
                 onChange={(value) => {
-                    setEndTime(value);
+                    if (value) {
+                        setEndTime(value);
+                    }
                 }}
             />
             <Form onSubmit={handleCreateOrder}>
@@ -565,6 +687,19 @@ const CreatingWashingOrder = () => {
                     value={carNumber}
                     onChange={setCarNumber}
                 />
+                <p style={{
+                    fontWeight: 'bold', display: 'flex',
+                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
+                }}>Выберите состояние заказа</p>
+
+                <InputPicker
+                    data={orderStatusArray}
+                    value={currentStatus}
+                    onChange={setCurrentStatus}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    menuStyle={{fontSize: "17px"}}
+                />
+
                 <InputField
                     label='Специалист:'
                     inputStyle={inputStyle}
@@ -606,6 +741,6 @@ const CreatingWashingOrder = () => {
             </Form>
         </>
     );
-};
+});
 
 export default CreatingWashingOrder;

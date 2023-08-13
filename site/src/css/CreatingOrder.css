@@ -2,7 +2,6 @@
     display: block;
     width: 75%;
     text-align: center;
-    /* центрируем блок по горизонтали */
     margin: 1rem auto;
 }
 
@@ -11,7 +10,11 @@
 }
 
 .custom-modal-dialog-polishing {
-    max-width: 60%;
+    max-width: 45%;
+}
+
+.custom-modal-dialog-tire {
+    max-width: 55%;
 }
 
 .btn-submit {
@@ -66,6 +69,10 @@
 }
 
 .my-custom-class .modal-content {
+    width: 600px;
+}
+
+.custom-modal {
     width: 600px;
 }
 

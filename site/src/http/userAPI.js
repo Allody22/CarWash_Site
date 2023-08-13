@@ -25,16 +25,28 @@ export const signOut = async () => {
 }
 
 export const check = async () => {
-    await $authHost.get('api/admin/adminRoleCheck');
+    await $authHost.get('api/admin/users/adminRoleCheck');
 }
 
-export const updateUserInfo = async (email, username, fullName, roles) => {
+export const updateUserInfo = async (username, fullName, roles, adminNote, userNote, email) => {
     const requestBody = {
-        email: email,
         fullName: fullName,
         username: username,
         roles: roles,
+        adminNote: adminNote,
+        userNote: userNote,
+        email: email
     };
-    console.log(requestBody)
-    return await $authHost.put('api/admin/updateUserInfo',requestBody);
+    const response =  await $authHost.post('api/admin/users/updateUserInfo',requestBody);
+    return await response.data;
+};
+
+export const getAllUsers = async () => {
+    const response = await $authHost.get('api/admin/users/getAllUserNames');
+    return await response.data;
+};
+
+export const findUserByPhone = async (userName) => {
+    const response = await $authHost.get('api/admin/users/findUserByTelephone?username=' +  encodeURIComponent(userName));
+    return await response.data;
 };

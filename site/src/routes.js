@@ -12,7 +12,7 @@ import CreatingWashingOrder from "./pages/CreatingWashingOrder";
 import CreatingPolishingOrder from "./pages/CreatingPolishingOrder";
 import CreatingTireOrder from "./pages/CreatingTireOrder";
 import UpdateOrderInfo from "./pages/UpdateOrderInfo";
-import ChangeServiceInfo from "./pages/ChangeServiceInfo";
+import ChangeServiceInfoFromEng from "./pages/ChangeServiceInfoFromEng";
 import AddNewService from "./pages/AddNewService";
 
 
@@ -47,7 +47,7 @@ export const authRoutes = [
     },
     {
         path:CHANGE_SERVICE_INFO,
-        Component: ChangeServiceInfo
+        Component: ChangeServiceInfoFromEng
     },
     {
         path:CREATE_NEW_SERVICE,

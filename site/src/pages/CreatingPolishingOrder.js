@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
-import {DatePicker, Notification, useToaster} from 'rsuite';
+import {DatePicker, Notification, toaster, useToaster} from 'rsuite';
 
 import addDays from 'date-fns/addDays';
 import {Divider} from 'rsuite';
@@ -14,10 +14,15 @@ import Modal from "react-bootstrap/Modal";
 import {InputNumber, InputPicker} from 'rsuite';
 import InputField from "../model/InputField";
 import {
-    createPolishingOrder,
-    getActualPolishingOrders,
+    createPolishingOrder, getAllPolishingServicesWithPriceAndTime,
     getPriceAndFreeTime
 } from "../http/orderAPI";
+import {observer} from "mobx-react-lite";
+import socketStore from "../store/SocketStore";
+import {BrowserRouter as Router, useHistory} from "react-router-dom";
+import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
+import {format, parseISO} from "date-fns";
+import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatysMapFromRus";
 
 
 const carTypesArray = [
@@ -25,6 +30,34 @@ const carTypesArray = [
     '2 тип - кроссовер',
     '3 тип - джип',
     'Неизвестно'
+].map(item => ({label: item, value: item}));
+
+const orderStatusArray = [
+    "Отменён",
+    "Не оплачен и не сделан",
+    "Оплачен на 5 процентов и не сделан",
+    "Оплачен на 10 процентов и не сделан",
+    "Оплачен на 20 процентов и не сделан",
+    "Оплачен на 30 процентов и не сделан",
+    "Оплачен на 40 процентов и не сделан",
+    "Оплачен на 50 процентов и не сделан",
+    "Оплачен на 60 процентов и не сделан",
+    "Оплачен на 70 процентов и не сделан",
+    "Оплачен на 80 процентов и не сделан",
+    "Оплачен на 90 процентов и не сделан",
+    "Полностью оплачен и не сделан",
+    "Не оплачен, но сделан",
+    "Оплачен на 5 процентов и сделан",
+    "Оплачен на 10 процентов и сделан",
+    "Оплачен на 20 процентов и сделан",
+    "Оплачен на 30 процентов и сделан",
+    "Оплачен на 40 процентов и сделан",
+    "Оплачен на 50 процентов и сделан",
+    "Оплачен на 60 процентов и сделан",
+    "Оплачен на 70 процентов и сделан",
+    "Оплачен на 80 процентов и сделан",
+    "Оплачен на 90 процентов и сделан",
+    "Полностью оплачен и сделан"
 ].map(item => ({label: item, value: item}));
 
 const smallInputStyle = {
@@ -45,7 +78,7 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
-const CreatingPolishingOrder = () => {
+const CreatingPolishingOrder = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
@@ -55,12 +88,16 @@ const CreatingPolishingOrder = () => {
 
     const [stringTimeForCurrentDay, setStringTimeForCurrentDay] = useState([]);
 
-
     const [selectedItems, setSelectedItems] = useState([]);
 
-    const [connectedOrders, setConnectedOrders] = useState([]);
+    const [mainOrders, setMainOrders] = useState([{
+        name: null, priceFirstType: null,
+        priceSecondType: null, priceThirdType: null, timeFirstType: null, timeSecondType: null, timeThirdType: null
+    }]);
+
 
     const [userContacts, setUserContacts] = useState('');
+    const [currentStatus, setCurrentStatus] = useState('');
     const [price, setPrice] = useState(0);
 
 
@@ -82,7 +119,6 @@ const CreatingPolishingOrder = () => {
     const [errorFlag, setErrorFlag] = useState(false);
     const [successResponse, setSuccessResponse] = useState();
     const toaster = useToaster();
-
 
     const [carNumber, setCarNumber] = useState('');
     const [carTypeMap, setCarTypeMap] = useState('');
@@ -208,8 +244,12 @@ const CreatingPolishingOrder = () => {
     useEffect(() => {
         async function getOrders() {
             try {
-                const response = await getActualPolishingOrders();
-                setConnectedOrders(response.orders.map(item => item.replace(/_/g, ' ')));
+                const response = await getAllPolishingServicesWithPriceAndTime();
+                const filteredOrdersMain = response.map(item => ({
+                    ...item,
+                    name: item.name.replace(/_/g, ' ')
+                }));
+                setMainOrders(filteredOrdersMain);
             } catch (error) {
                 if (error.response) {
                     alert(error.response.data.message)
@@ -248,6 +288,39 @@ const CreatingPolishingOrder = () => {
 
         setBoxNumber(boxNumber);
     };
+    useHistory();
+    const newOrderMessage = (
+        <Router>
+            <Notification
+                type="info"
+                header="Новый заказ!"
+                closable
+                timeout={null}
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    {socketStore.message && (
+                        <>
+                            <div style={{textAlign: 'left'}}>
+                                <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
+                                <p>Время начала
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Notification>
+        </Router>
+    );
+
+    useEffect(() => {
+        if (socketStore.message && !socketStore.isAlreadyShown) {
+            toaster.push(newOrderMessage, {placement: "bottomEnd"});
+            socketStore.isAlreadyShown = true;
+        }
+    }, [socketStore.message]);
 
     const successMessage = (
         <Notification
@@ -277,13 +350,17 @@ const CreatingPolishingOrder = () => {
 
     useEffect(() => {
         if (errorResponse) {
-            toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            setTimeout(() => {
+                toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            }, 100);
         }
     }, [errorFlag]);
 
     useEffect(() => {
         if (successResponse) {
-            toaster.push(successMessage, {placement: "bottomEnd"});
+            setTimeout(() => {
+                toaster.push(successMessage, {placement: "bottomEnd"});
+            }, 100);
         }
     }, [successResponse]);
 
@@ -296,9 +373,10 @@ const CreatingPolishingOrder = () => {
         setSubmitTime(Date.now());
         try {
 
-            const response = await createPolishingOrder(selectedItems, userContacts, requestStartTime.toISOString(),
-                requestEndTime.toISOString(),
-                administrator, specialist, boxNumber, bonuses, comments, carNumber, carType, price);
+            const response = await createPolishingOrder(selectedItems, userContacts,
+                requestStartTime.toISOString(), requestEndTime.toISOString(),
+                administrator, specialist, boxNumber, bonuses, comments,
+                carNumber, carType, price, currentOrderStatusMapFromRus[currentStatus]);
             setSuccessResponse(null)
 
             const ordersForResponse = response.orders.map(order => `"${order}"`);
@@ -313,7 +391,7 @@ const CreatingPolishingOrder = () => {
                 minute: "2-digit",
             });
 
-            const sentence = `Заказы ${ordersSentence} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
+            const sentence = `Заказы ${ordersSentence.replace(/_/g, ' ')} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
             setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
@@ -349,7 +427,6 @@ const CreatingPolishingOrder = () => {
     };
 
     const compareTimeIntervals = (a, b) => {
-        // Извлекаем время начала интервала из строки и парсим его в минуты, прошедшие с полуночи
         const aStartTime = timeStringToMinutes(a.split(' - ')[0]);
         const bStartTime = timeStringToMinutes(b.split(' - ')[0]);
         if (aStartTime < bStartTime) {
@@ -373,10 +450,11 @@ const CreatingPolishingOrder = () => {
 
     return (
         <>
-            <p style={{...inputStyle,marginTop:'15px'}}>Страница добавления заказов на полировку</p>
+            <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления заказов на полировку</p>
             <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
                 на полировку из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова и набор услуг</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова и
+                набор услуг</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
@@ -388,23 +466,37 @@ const CreatingPolishingOrder = () => {
                     <Modal.Title>Выберите заказы</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {connectedOrders.sort().map(item => (
-                        <div key={item}
-                             style={{
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                                 fontSize: '16px'
-                             }}>
-                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                            <InputNumber
-                                size="sm"
-                                placeholder="sm"
-                                style={stylesForInput}
-                                min={0}
-                                onChange={value => handleItemChange(item, value)}
-                                value={getItemValueByName(item) || 0}
-                            />
+                    {mainOrders.map(item => (
+                        <div key={item.name} style={{
+                            fontSize: '16px', borderBottom: '1px solid lightgray',
+                            paddingBottom: '10px', paddingTop: '10px'
+                        }}>
+                            <div style={{textAlign: 'center'}}>
+                                <span>{item.name}</span>
+                            </div>
+                            <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '7px'}}>
+                                <div>
+                                    <span style={{color: "red"}}>Цены: </span>
+                                    <span>{`${item.priceFirstType} / ${item.priceSecondType} / ${item.priceThirdType}`}</span>
+                                </div>
+                                <div style={{marginLeft: 'auto'}}>
+                                    <span style={{color: "blue"}}>Время: </span>
+                                    <span>{`${item.timeFirstType} / ${item.timeSecondType} / ${item.timeThirdType}`}</span>
+                                </div>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}>
+                                <InputNumber size="sm" placeholder="sm"
+                                             style={Object.assign({}, stylesForInput, {
+                                                 margin: '0 auto',
+                                                 marginTop: '10px'
+                                             })}
+                                             min={0}
+                                             onChange={value => handleItemChange(item.name, value)}
+                                             value={getItemValueByName(item.name) || 0}/>
+                            </div>
                         </div>
                     ))}
                 </Modal.Body>
@@ -465,6 +557,22 @@ const CreatingPolishingOrder = () => {
                 alignItems: 'center', marginTop: '15px'
             }}>Выберите день заказа</p>
             <DatePicker
+                isoWeek
+                locale={{
+                    sunday: 'Вск',
+                    monday: 'Пн',
+                    tuesday: 'Вт',
+                    wednesday: 'Ср',
+                    thursday: 'Чт',
+                    friday: 'Пт',
+                    saturday: 'Сб',
+                    ok: 'OK',
+                    today: 'Сегодня',
+                    yesterday: 'Вчера',
+                    hours: 'Часы',
+                    minutes: 'Минуты',
+                    seconds: 'Секунды'
+                }}
                 format="yyyy-MM-dd"
                 oneTap
                 ranges={predefinedBottomRanges}
@@ -496,7 +604,7 @@ const CreatingPolishingOrder = () => {
             }}>Расписание с доступным временем</p>
 
             <InputPicker
-                data = {stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({ label: item, value: item }))}
+                data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
                 style={{
                     width: 500,
                     marginLeft: 'auto',
@@ -510,7 +618,9 @@ const CreatingPolishingOrder = () => {
                 menuStyle={{fontSize: "17px"}} // ваш класс стилей здесь
                 value={endTime}
                 onChange={(value) => {
-                    setEndTime(value);
+                    if (value) {
+                        setEndTime(value);
+                    }
                 }}
             />
             <Form onSubmit={handleCreateOrder}>
@@ -518,19 +628,32 @@ const CreatingPolishingOrder = () => {
                     label='Номер телефона клиента:'
                     id='name'
                     value={userContacts}
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     onChange={setUserContacts}
                 />
                 <InputField
                     label='Номер автомобиля:'
                     id='carNumber'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={carNumber}
                     onChange={setCarNumber}
                 />
+                <p style={{
+                    fontWeight: 'bold', display: 'flex',
+                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
+                }}>Выберите состояние заказа</p>
+
+                <InputPicker
+                    data={orderStatusArray}
+                    value={currentStatus}
+                    onChange={setCurrentStatus}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    menuStyle={{fontSize: "17px"}}
+                />
+
                 <InputField
                     label='Специалист:'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
@@ -538,21 +661,21 @@ const CreatingPolishingOrder = () => {
                 <InputField
                     label='Администратор:'
                     id='administrator'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={administrator}
                     onChange={setAdministrator}
                 />
                 <InputField
                     label='Количество использованных бонусов:'
                     id='bonuses'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={bonuses}
                     onChange={setBonuses}
                 />
                 <InputField
                     label='Комментарии:'
                     id='comments'
-                    inputStyle= {inputStyle}
+                    inputStyle={inputStyle}
                     value={comments}
                     onChange={setComments}
                 />
@@ -570,6 +693,6 @@ const CreatingPolishingOrder = () => {
             </Form>
         </>
     );
-};
+});
 
 export default CreatingPolishingOrder;

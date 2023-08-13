@@ -15,9 +15,43 @@ import {InputNumber, InputPicker} from 'rsuite';
 import InputField from "../model/InputField";
 import {
     createTireOrder,
-    getActualTireOrders,
+    getAllTireServicesWithPriceAndTime,
     getPriceAndFreeTime
 } from "../http/orderAPI";
+import socketStore from "../store/SocketStore";
+import {observer} from "mobx-react-lite";
+import {BrowserRouter as Router, useHistory} from "react-router-dom";
+import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
+import {format, parseISO} from "date-fns";
+import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatysMapFromRus";
+
+const orderStatusArray = [
+    "Отменён",
+    "Не оплачен и не сделан",
+    "Оплачен на 5 процентов и не сделан",
+    "Оплачен на 10 процентов и не сделан",
+    "Оплачен на 20 процентов и не сделан",
+    "Оплачен на 30 процентов и не сделан",
+    "Оплачен на 40 процентов и не сделан",
+    "Оплачен на 50 процентов и не сделан",
+    "Оплачен на 60 процентов и не сделан",
+    "Оплачен на 70 процентов и не сделан",
+    "Оплачен на 80 процентов и не сделан",
+    "Оплачен на 90 процентов и не сделан",
+    "Полностью оплачен и не сделан",
+    "Не оплачен, но сделан",
+    "Оплачен на 5 процентов и сделан",
+    "Оплачен на 10 процентов и сделан",
+    "Оплачен на 20 процентов и сделан",
+    "Оплачен на 30 процентов и сделан",
+    "Оплачен на 40 процентов и сделан",
+    "Оплачен на 50 процентов и сделан",
+    "Оплачен на 60 процентов и сделан",
+    "Оплачен на 70 процентов и сделан",
+    "Оплачен на 80 процентов и сделан",
+    "Оплачен на 90 процентов и сделан",
+    "Полностью оплачен и сделан"
+].map(item => ({label: item, value: item}));
 
 const inputStyle = {
     fontWeight: 'bold', display: 'flex',
@@ -42,7 +76,7 @@ const stylesForInput = {
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
 
-const CreatingTireOrder = () => {
+const CreatingTireOrder = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
@@ -53,8 +87,15 @@ const CreatingTireOrder = () => {
     const [stringTimeForCurrentDay, setStringTimeForCurrentDay] = useState([]);
 
     const [selectedItems, setSelectedItems] = useState([]);
+    const [currentStatus, setCurrentStatus] = useState('');
 
-    const [connectedOrders, setConnectedOrders] = useState([]);
+    const [mainOrders, setMainOrders] = useState([{
+        name: null, price_r_13: null,
+        price_r_14: null, price_r_15: null, price_r_16: null, price_r_17: null, price_r_18: null,
+        price_r_19: null, price_r_20: null, price_r_21: null, price_r_22: null,
+        time_r_14: null, time_r_15: null, time_r_16: null, time_r_17: null, time_r_18: null,
+        time_r_19: null, time_r_20: null, time_r_21: null, time_r_22: null,
+    }]);
 
     const [userContacts, setUserContacts] = useState('');
     const [price, setPrice] = useState(0);
@@ -183,10 +224,14 @@ const CreatingTireOrder = () => {
 
 
     useEffect(() => {
-        async function getOrders() {
+        async function getAllServices() {
             try {
-                const response = await getActualTireOrders();
-                setConnectedOrders(response.orders.map(item => item.replace(/_/g, ' ')));
+                const response = await getAllTireServicesWithPriceAndTime();
+                const filteredOrdersMain = response.map(item => ({
+                    ...item,
+                    name: item.name.replace(/_/g, ' ')
+                }));
+                setMainOrders(filteredOrdersMain);
             } catch (error) {
                 if (error.response) {
                     alert(error.response.data.message)
@@ -196,7 +241,7 @@ const CreatingTireOrder = () => {
             }
         }
 
-        getOrders();
+        getAllServices();
     }, []);
 
     const handleOpenModal = () => setShowModal(true);
@@ -225,7 +270,37 @@ const CreatingTireOrder = () => {
 
         setBoxNumber(boxNumber);
     };
+    useHistory();
+    const newOrderMessage = (
+        <Router>
+            <Notification
+                type="info"
+                header="Новый заказ!"
+                closable
+                timeout={null}
+                style={{border: '1px solid black'}}
+            >
+                <div style={{width: 320}}>
+                    {socketStore.message && (
+                        <>
+                            <div style={{textAlign: 'left'}}>
+                                <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
+                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Notification>
+        </Router>
+    );
 
+    useEffect(() => {
+        if (socketStore.message && !socketStore.isAlreadyShown) {
+            toaster.push(newOrderMessage, {placement: "bottomEnd"});
+            socketStore.isAlreadyShown = true;
+        }
+    }, [socketStore.message]);
 
     const successMessage = (
         <Notification
@@ -277,7 +352,8 @@ const CreatingTireOrder = () => {
 
             const response = await createTireOrder(selectedItems.map(i => i.replace(/ /g, '_')), userContacts,
                 wheelR, requestStartTime.toISOString(), requestEndTime.toISOString(),
-                administrator, specialist, boxNumber, bonuses, comments, carNumber, null, price);
+                administrator, specialist, boxNumber, bonuses, comments,
+                carNumber, null, price,  currentOrderStatusMapFromRus[currentStatus]);
             setSuccessResponse(null)
 
             const ordersForResponse = response.orders.map(order => `"${order}"`);
@@ -292,7 +368,7 @@ const CreatingTireOrder = () => {
                 minute: "2-digit",
             });
 
-            const sentence = `Заказы ${ordersSentence} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
+            const sentence = `Заказы ${ordersSentence.replace(/_/g, ' ')} забронированы с ${formattedStartTime} до ${formattedEndTime}.`;
             setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
@@ -361,28 +437,112 @@ const CreatingTireOrder = () => {
             </Button>
             <Modal show={showModal}
                    onHide={handleCloseModal}
-                   dialogClassName="custom-modal-dialog">
+                   dialogClassName="custom-modal-dialog-tire"
+            className="">
                 <Modal.Header closeButton>
                     <Modal.Title>Выберите заказы</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {connectedOrders.sort().map(item => (
-                        <div key={item}
-                             style={{
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                                 fontSize: '16px'
-                             }}>
-                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                            <InputNumber
-                                size="sm"
-                                placeholder="sm"
-                                style={stylesForInput}
-                                min={0}
-                                onChange={value => handleItemChange(item, value)}
-                                value={getItemValueByName(item) || 0}
-                            />
+                    {mainOrders.map((item, index) => (
+                        <div key={index} style={{
+                            fontSize: '16px',
+                            borderBottom: '1px solid lightgray',
+                            paddingBottom: '10px',
+                            paddingTop: '10px'
+                        }}>
+                            <div style={{textAlign: 'center'}}>
+                                <span>{item.name}</span>
+                            </div>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto 1fr',
+                                gap: '10px',
+                                alignItems: 'center'
+                            }}>
+                                <div style={{color: 'green'}}>Размеры:</div>
+                                <div style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '10px'}}>
+                                    <div>R13</div>
+                                    <div>R14</div>
+                                    <div>R15</div>
+                                    <div>R16</div>
+                                    <div>R17</div>
+                                    <div>R18</div>
+                                    <div>R19</div>
+                                    <div>R20</div>
+                                    <div>R21</div>
+                                    <div>R22</div>
+                                </div>
+                            </div>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto 1fr',
+                                gap: '10px',
+                                alignItems: 'center'
+                            }}>
+                                <div style={{color: 'blue', gridColumn: '1'}}>Время:</div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(10, 1fr)',
+                                    gap: '10px',
+                                    gridColumn: '2'
+                                }}>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_13}</div>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_14}</div>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_15}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0'}{item.time_r_16}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_17}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_18}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_19}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_20}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.time_r_21}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.time_r_22}</div>
+                                </div>
+                            </div>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto 1fr',
+                                gap: '10px',
+                                alignItems: 'center'
+                            }}>
+                                <div style={{color: 'red', gridColumn: '1'}}>Цены:</div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(10, 1fr)',
+                                    gap: '10px',
+                                    gridColumn: '2'
+                                }}>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_13}</div>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_14}</div>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_15}</div>
+                                    <div
+                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_16}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_17}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_18}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_19}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_20}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.price_r_21}</div>
+                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.price_r_22}</div>
+                                </div>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}>
+                                <InputNumber
+                                    size="sm"
+                                    placeholder="sm"
+                                    style={Object.assign({}, stylesForInput, {margin: '0 auto', marginTop: '10px'})}
+                                    min={0}
+                                    onChange={value => handleItemChange(item.name, value)}
+                                    value={getItemValueByName(item.name) || 0}
+                                />
+                            </div>
                         </div>
                     ))}
                 </Modal.Body>
@@ -392,38 +552,39 @@ const CreatingTireOrder = () => {
                     </Button>
                 </Modal.Footer>
             </Modal>
-            {selectedItems.length > 0 ? (
-                <div className="selected-items-container text-center">
-                    <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
-                        Доп услуги:
-                    </Form.Label>
-                    <div className="selected-items">
-                        {selectedItems
-                            .filter((item, index) => selectedItems.indexOf(item) === index)
-                            .map((item) => {
-                                if (getItemValueByName(item) > 0) {
-                                    return (
-                                        <span key={item} className="item">
+            {
+                selectedItems.length > 0 ? (
+                    <div className="selected-items-container text-center">
+                        <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
+                            Доп услуги:
+                        </Form.Label>
+                        <div className="selected-items">
+                            {selectedItems
+                                .filter((item, index) => selectedItems.indexOf(item) === index)
+                                .map((item) => {
+                                    if (getItemValueByName(item) > 0) {
+                                        return (
+                                            <span key={item} className="item">
                   {`${item} (${getItemValueByName(item)})`}
                 </span>
-                                    );
-                                }
-                                return null;
-                            })}
+                                        );
+                                    }
+                                    return null;
+                                })}
+                        </div>
                     </div>
-                </div>
-            ) : (
-                <div className='selected-items-container text-center'>
-                    <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
-                        Дополнительные услуги:
-                    </Form.Label>
+                ) : (
                     <div className='selected-items-container text-center'>
+                        <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
+                            Дополнительные услуги:
+                        </Form.Label>
+                        <div className='selected-items-container text-center'>
                         <span className='empty-list' style={{fontSize: '1.1em'}}>
                             Нет дополнительных услуг
                         </span>
+                        </div>
                     </div>
-                </div>
-            )
+                )
             }
             <Divider></Divider>
             <p style={inputStyle}>Выберите размер колёс</p>
@@ -437,6 +598,22 @@ const CreatingTireOrder = () => {
 
             <p style={inputStyle}>Выберите день заказа</p>
             <DatePicker
+                isoWeek
+                locale={{
+                    sunday: 'Вск',
+                    monday: 'Пн',
+                    tuesday: 'Вт',
+                    wednesday: 'Ср',
+                    thursday: 'Чт',
+                    friday: 'Пт',
+                    saturday: 'Сб',
+                    ok: 'OK',
+                    today: 'Сегодня',
+                    yesterday: 'Вчера',
+                    hours: 'Часы',
+                    minutes: 'Минуты',
+                    seconds: 'Секунды'
+                }}
                 format="yyyy-MM-dd"
                 oneTap
                 ranges={predefinedBottomRanges}
@@ -479,7 +656,9 @@ const CreatingTireOrder = () => {
                 menuStyle={{fontSize: "17px"}}
                 value={endTime}
                 onChange={(value) => {
-                    setEndTime(value);
+                    if (value) {
+                        setEndTime(value);
+                    }
                 }}
             />
             <Form onSubmit={handleCreateOrder}>
@@ -497,6 +676,21 @@ const CreatingTireOrder = () => {
                     value={carNumber}
                     onChange={setCarNumber}
                 />
+
+                <p style={{
+                    fontWeight: 'bold', display: 'flex',
+                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
+                }}>Выберите состояние заказа</p>
+
+                <InputPicker
+                    data={orderStatusArray}
+                    value={currentStatus}
+                    onChange={setCurrentStatus}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    menuStyle={{fontSize: "17px"}}
+                />
+
+
                 <InputField
                     label='Специалист:'
                     inputStyle={inputStyle}
@@ -538,6 +732,6 @@ const CreatingTireOrder = () => {
             </Form>
         </>
     );
-};
+});
 
 export default CreatingTireOrder;
