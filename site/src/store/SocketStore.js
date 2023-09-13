@@ -2,7 +2,6 @@ import SockJS from "sockjs-client";
 import { Stomp } from "@stomp/stompjs";
 import {action, makeAutoObservable} from "mobx";
 import {getOrdersCreatedInOneDay} from "../http/orderAPI";
-import {wait} from "@testing-library/user-event/dist/utils";
 
 class SocketStore {
     socket = null;

@@ -23,7 +23,7 @@ import {observer} from "mobx-react-lite";
 import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
-import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatysMapFromRus";
+import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
 
 const orderStatusArray = [
     "Отменён",
@@ -55,6 +55,11 @@ const orderStatusArray = [
 
 const inputStyle = {
     fontWeight: 'bold', display: 'flex',
+    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
+
+const importantInputStyle = {
+    fontWeight: 'bold', display: 'flex', color:'red',
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
@@ -429,8 +434,8 @@ const CreatingTireOrder = observer(() => {
             <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления заказов на шиномонтаж</p>
             <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
                 на шиномонтаж из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, диаметр колёс и
-                набор услуг</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, диаметр колёс,
+                набор услуг и состояние заказа</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
@@ -587,7 +592,7 @@ const CreatingTireOrder = observer(() => {
                 )
             }
             <Divider></Divider>
-            <p style={inputStyle}>Выберите размер колёс</p>
+            <p style={importantInputStyle}>Выберите размер колёс</p>
             <InputPicker
                 data={wheelSizeArray}
                 value={wheelR}
@@ -596,7 +601,7 @@ const CreatingTireOrder = observer(() => {
                 menuStyle={{fontSize: "17px"}}
             />
 
-            <p style={inputStyle}>Выберите день заказа</p>
+            <p style={importantInputStyle}>Выберите день заказа</p>
             <DatePicker
                 isoWeek
                 locale={{
@@ -639,7 +644,7 @@ const CreatingTireOrder = observer(() => {
                 <div className="order-time-label">Время выполнения: {orderTime}</div>
             </div>
 
-            <p style={inputStyle}>Расписание с доступным временем</p>
+            <p style={importantInputStyle}>Расписание с доступным временем</p>
 
             <InputPicker
                 data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
@@ -677,10 +682,7 @@ const CreatingTireOrder = observer(() => {
                     onChange={setCarNumber}
                 />
 
-                <p style={{
-                    fontWeight: 'bold', display: 'flex',
-                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
-                }}>Выберите состояние заказа</p>
+                <p style={importantInputStyle}>Выберите состояние заказа</p>
 
                 <InputPicker
                     data={orderStatusArray}
@@ -689,8 +691,6 @@ const CreatingTireOrder = observer(() => {
                     style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
                 />
-
-
                 <InputField
                     label='Специалист:'
                     inputStyle={inputStyle}

@@ -158,6 +158,7 @@ const ChangeUserInfo = observer(() => {
                     setFullName(response.fullName || '');
                     setAdminNote(response.adminNotes || '');
                     setUserNote(response.userNotes || '');
+                    setEmail(response.email || '')
                     const roles = response.roles.map(role => rolesToRussianMap(role.name)) || [];
                     setSelectedRoles(roles);
 

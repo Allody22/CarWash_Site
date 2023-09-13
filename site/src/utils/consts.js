@@ -18,3 +18,8 @@ export const CHANGE_SERVICE_INFO = `/changeServiceInfo`
 
 export const CREATE_NEW_SERVICE = `/createNewService`
 
+export const CHECK_SALES = `/checkSales`
+
+export const NEW_SALE = `/new_sale`
+
+

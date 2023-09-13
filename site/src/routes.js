@@ -1,9 +1,9 @@
 import Admin from "./pages/Admin";
 import {
-    ADMIN_ROUTE, CHANGE_SERVICE_INFO, CHANGE_USERINFO_ROUTE, CREATE_NEW_SERVICE,
+    ADMIN_ROUTE, CHANGE_SERVICE_INFO, CHANGE_USERINFO_ROUTE, CHECK_SALES, CREATE_NEW_SERVICE,
     CREATE_POLISHING_ORDER_ROUTE, CREATE_TIRE_ORDER_ROUTE,
     CREATE_WASHING_ORDER_ROUTE,
-    LOGIN_ROUTE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE,
+    LOGIN_ROUTE, NEW_SALE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE,
 } from "./utils/consts";
 import Auth from "./pages/Auth";
 import OrderTable from "./pages/OrdersTable";
@@ -14,6 +14,8 @@ import CreatingTireOrder from "./pages/CreatingTireOrder";
 import UpdateOrderInfo from "./pages/UpdateOrderInfo";
 import ChangeServiceInfoFromEng from "./pages/ChangeServiceInfoFromEng";
 import AddNewService from "./pages/AddNewService";
+import SalePage from "./pages/SalePage";
+import NewSalePage from "./pages/NewSalePage";
 
 
 export const authRoutes = [
@@ -40,6 +42,14 @@ export const authRoutes = [
     {
         path:CHANGE_USERINFO_ROUTE,
         Component: ChangeUserInfo
+    },
+    {
+        path:CHECK_SALES,
+        Component: SalePage
+    },
+    {
+        path:NEW_SALE,
+        Component: NewSalePage
     },
     {
         path:UPDATE_ORDER_INFO_ROUTE,

@@ -22,7 +22,7 @@ import socketStore from "../store/SocketStore";
 import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
-import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatysMapFromRus";
+import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
 
 
 const carTypesArray = [
@@ -31,6 +31,11 @@ const carTypesArray = [
     '3 тип - джип',
     'Неизвестно'
 ].map(item => ({label: item, value: item}));
+
+const importantInputStyle = {
+    fontWeight: 'bold', display: 'flex', color:'red',
+    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
+}
 
 const orderStatusArray = [
     "Отменён",
@@ -372,11 +377,14 @@ const CreatingPolishingOrder = observer(() => {
         setIsSubmitting(true);
         setSubmitTime(Date.now());
         try {
+            console.log(selectedItems.map(i => i.replace(/ /g, '_')))
+            console.log(currentOrderStatusMapFromRus[currentStatus])
 
             const response = await createPolishingOrder(selectedItems, userContacts,
                 requestStartTime.toISOString(), requestEndTime.toISOString(),
                 administrator, specialist, boxNumber, bonuses, comments,
                 carNumber, carType, price, currentOrderStatusMapFromRus[currentStatus]);
+            console.log(response)
             setSuccessResponse(null)
 
             const ordersForResponse = response.orders.map(order => `"${order}"`);
@@ -453,8 +461,8 @@ const CreatingPolishingOrder = observer(() => {
             <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления заказов на полировку</p>
             <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
                 на полировку из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова и
-                набор услуг</p>
+            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова,
+                набор услуг и состояние заказа</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
@@ -540,10 +548,8 @@ const CreatingPolishingOrder = observer(() => {
             )
             }
             <Divider></Divider>
-            <p style={{
-                fontWeight: 'bold', display: 'flex',
-                fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
-            }}>Выберите тип кузова</p>
+            <p style={importantInputStyle}>Выберите тип кузова</p>
+
             <InputPicker
                 data={carTypesArray}
                 value={carTypeMap}
@@ -552,10 +558,7 @@ const CreatingPolishingOrder = observer(() => {
                 menuStyle={{fontSize: "17px"}}
             />
 
-            <p style={{
-                fontWeight: 'bold', display: 'flex', fontSize: '17px', justifyContent: 'center',
-                alignItems: 'center', marginTop: '15px'
-            }}>Выберите день заказа</p>
+            <p style={importantInputStyle}>Выберите день заказа</p>
             <DatePicker
                 isoWeek
                 locale={{
@@ -598,10 +601,7 @@ const CreatingPolishingOrder = observer(() => {
                 <div className="order-time-label">Время выполнения: {orderTime}</div>
             </div>
 
-            <p style={{
-                fontWeight: 'bold', display: 'flex', fontSize: '17px', justifyContent: 'center',
-                alignItems: 'center', marginTop: '15px'
-            }}>Расписание с доступным временем</p>
+            <p style={importantInputStyle}>Расписание с доступным временем</p>
 
             <InputPicker
                 data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
@@ -638,10 +638,7 @@ const CreatingPolishingOrder = observer(() => {
                     value={carNumber}
                     onChange={setCarNumber}
                 />
-                <p style={{
-                    fontWeight: 'bold', display: 'flex',
-                    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
-                }}>Выберите состояние заказа</p>
+                <p style={importantInputStyle}>Выберите состояние заказа</p>
 
                 <InputPicker
                     data={orderStatusArray}

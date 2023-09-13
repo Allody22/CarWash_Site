@@ -10,10 +10,12 @@ import updateOrderInfo from "../assets/updateOrderInfo.png"
 import updateClientInfo from "../assets/updatingClientInfo.png"
 import updateServiceInfo from "../assets/updateServiceInfo.png"
 import addNewService from "../assets/addService.png"
+import SalePhoto from "../assets/SalePhoto.png"
+
 
 import {
     CHANGE_SERVICE_INFO,
-    CHANGE_USERINFO_ROUTE, CREATE_NEW_SERVICE,
+    CHANGE_USERINFO_ROUTE, CHECK_SALES, CREATE_NEW_SERVICE,
     CREATE_POLISHING_ORDER_ROUTE, CREATE_TIRE_ORDER_ROUTE,
     CREATE_WASHING_ORDER_ROUTE, ORDERS_TABLE_ROUTE, UPDATE_ORDER_INFO_ROUTE
 } from "../utils/consts";
@@ -120,6 +122,34 @@ const Admin = observer(() => {
                 <Button
                     variant={"outline-dark"}
                     className="mt-4 p-2 flex-grow-1"
+                    onClick={() => history.push(UPDATE_ORDER_INFO_ROUTE)}
+                    style={{marginTop: '10px'}}
+                >
+                    Изменить информацию о заказе
+                </Button>
+                <Image src={updateOrderInfo} fluid style={verySmallImageStyle}/>
+            </div>
+
+
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginTop: '10px'
+            }}>
+                <Button
+                    variant={"outline-dark"}
+                    className="mt-4 p-2 flex-grow-1"
+                    onClick={() => history.push(CHECK_SALES)}
+                    style={{marginTop: '10px'}}
+                >
+                    Страница акций
+                </Button>
+                <Image src={SalePhoto} fluid style={verySmallImageStyle}/>
+            </div>
+
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px'}}>
+                <Button
+                    variant={"outline-dark"}
+                    className="mt-4 p-2 flex-grow-1"
                     onClick={() => history.push(CHANGE_USERINFO_ROUTE)}
                     style={{marginTop: '10px'}}
                 >
@@ -129,17 +159,6 @@ const Admin = observer(() => {
 
             </div>
 
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px'}}>
-                <Button
-                    variant={"outline-dark"}
-                    className="mt-4 p-2 flex-grow-1"
-                    onClick={() => history.push(UPDATE_ORDER_INFO_ROUTE)}
-                    style={{marginTop: '10px'}}
-                >
-                    Изменить информацию о заказе
-                </Button>
-                <Image src={updateOrderInfo} fluid style={verySmallImageStyle}/>
-            </div>
 
             <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px'}}>
                 <Button
@@ -167,6 +186,7 @@ const Admin = observer(() => {
                 </Button>
                 <Image src={addNewService} fluid style={verySmallImageStyle}/>
             </div>
+
 
         </Container>
     );

@@ -1,7 +1,6 @@
 import '../css/CreatingOrder.css';
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
-import '../css/CreatingOrder.css';
 import InputField from "../model/InputField";
 import {BrowserRouter as Router, Link, useHistory, useParams} from "react-router-dom";
 import {
@@ -19,7 +18,7 @@ import {observer} from "mobx-react-lite";
 import socketStore from "../store/SocketStore";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromEng from "../model/map/CurrentOrderStatusMapFromEng";
-import currentOrderStatysMapFromRus from "../model/map/CurrentOrderStatysMapFromRus";
+import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
@@ -211,16 +210,6 @@ const UpdateOrderInfo = observer(() => {
             current.filter(item => item.name !== name)
         );
     };
-
-    useEffect(() => {
-        const newSelectedItems = [];
-        for (let item of itemsCount) {
-            for (let i = 0; i < item.value; i++) {
-                newSelectedItems.push(item.name);
-            }
-        }
-        setSelectedItems(newSelectedItems);
-    }, [itemsCount]);
 
     useEffect(() => {
         const newSelectedItems = [];
@@ -489,7 +478,7 @@ const UpdateOrderInfo = observer(() => {
                     autoNumber, carType, specialist, boxNumber, bonuses,
                     comments, executedToCode, endTime.toISOString(),
                     selectedItems.map(i => i.replace(/ /g, '_')),
-                    currentOrderStatysMapFromRus[currentStatus]);
+                    currentOrderStatusMapFromRus[currentStatus]);
                 setSuccessResponse(data.message)
             } catch
                 (error) {
