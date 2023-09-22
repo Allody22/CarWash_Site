@@ -19,6 +19,8 @@ import socketStore from "../store/SocketStore";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromEng from "../model/map/CurrentOrderStatusMapFromEng";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
+import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
+import {getAllSales} from "../http/userAPI";
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
@@ -163,6 +165,12 @@ const UpdateOrderInfo = observer(() => {
     const [executed, setExecuted] = useState('');
     const [executedToCode, setExecutedToCode] = useState(false);
 
+    const [selectedSaleId, setSelectedSaleId] = useState(null);
+
+
+    const [selectedSaleDescription, setSelectedSaleDescription] = useState('');
+    const [files, setFiles] = useState([]);
+
     const [errorResponse, setErrorResponse] = useState();
     const [errorFlag, setErrorFlag] = useState(false);
 
@@ -177,6 +185,11 @@ const UpdateOrderInfo = observer(() => {
 
     const {id} = useParams();
     const [orderId, setOrderId] = useState('')
+
+    const filesOptions = files.map(file => ({
+        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+        value: file.id
+    }));
 
     const updateItem = (name, value) => {
         if (!checkIfItemExists(name)) {
@@ -233,6 +246,9 @@ const UpdateOrderInfo = observer(() => {
             if (!isNaN(currentId) && String(currentId).trim() !== '') {
                 setItemsCount([])
                 const response = await getOrderInfo(parseInt(currentId));
+                const responseSales = await getAllSales();
+                setFiles(responseSales);
+
                 const countMap = response.orders.map(i => i.replace(/_/g, ' ')).reduce((map, order) => {
                     map.set(order, (map.get(order) || 0) + 1);
                     return map;
@@ -242,9 +258,17 @@ const UpdateOrderInfo = observer(() => {
                     handleItemChange(item, count.toString());
                 })
 
+
                 const responseCarType = mapCarTypeCodeToString(response.autoType)
                 setCarTypeMap(responseCarType)
                 setCurrentStatus(currentOrderStatusMapFromEng[response.currentStatus])
+
+                setSelectedSaleDescription(response.sale);
+                const selectedFile = files.find(file => file.description === response.sale);
+                if (selectedFile) {
+                    setSelectedSaleId(selectedFile.id);
+                }
+
 
                 setOrderId(response.id)
                 setAutoNumber(response.autoNumber)
@@ -316,6 +340,8 @@ const UpdateOrderInfo = observer(() => {
         }
     };
 
+
+
     async function getAllPolishingServices() {
         try {
             const response = await getAllPolishingServicesWithPriceAndTime();
@@ -332,6 +358,7 @@ const UpdateOrderInfo = observer(() => {
             }
         }
     }
+
 
     async function getAllWashingServices() {
         try {
@@ -478,7 +505,7 @@ const UpdateOrderInfo = observer(() => {
                     autoNumber, carType, specialist, boxNumber, bonuses,
                     comments, executedToCode, endTime.toISOString(),
                     selectedItems.map(i => i.replace(/ /g, '_')),
-                    currentOrderStatusMapFromRus[currentStatus]);
+                    currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
                 setSuccessResponse(data.message)
             } catch
                 (error) {
@@ -531,6 +558,11 @@ const UpdateOrderInfo = observer(() => {
         }
     };
 
+    const handleFileChange = (selectedValue) => {
+        const selectedFile = files.find(file => file.id === selectedValue);
+        setSelectedSaleDescription(selectedFile.description);
+        setSelectedSaleId(selectedFile.id);
+    }
 
     const predefinedBottomRanges = [
         {
@@ -946,6 +978,18 @@ const UpdateOrderInfo = observer(() => {
                     style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
                 />
+
+                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+
+                <InputPicker
+                    data={filesOptions}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    value={selectedSaleId}
+                    menuStyle={{fontSize: "17px"}}
+                    onChange={handleFileChange}
+                />
+
+
                 <InputField
                     inputStyle={inputStyle}
                     label='Использованные клиентом бонусы'

@@ -23,6 +23,9 @@ import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
+import {getAllSales} from "../http/userAPI";
+import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
+import InputFieldNear from "../model/InputFieldNear";
 
 
 const carTypesArray = [
@@ -33,9 +36,10 @@ const carTypesArray = [
 ].map(item => ({label: item, value: item}));
 
 const importantInputStyle = {
-    fontWeight: 'bold', display: 'flex', color:'red',
+    fontWeight: 'bold', display: 'flex', color: 'red',
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
+
 
 const orderStatusArray = [
     "Отменён",
@@ -83,6 +87,13 @@ const inputStyle = {
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
+const inputStyleForPriceTime = {
+    fontWeight: 'bold', display: 'flex',
+    fontSize: '17px', justifyContent: 'center', alignItems: 'center',
+    margin: '5px', padding: '5px', border: '1px solid #ccc',
+    backgroundColor: '#fff', borderRadius: '5px', boxSizing: 'border-box'
+};
+
 const CreatingPolishingOrder = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
@@ -125,12 +136,17 @@ const CreatingPolishingOrder = observer(() => {
     const [successResponse, setSuccessResponse] = useState();
     const toaster = useToaster();
 
+    const [selectedSaleDescription, setSelectedSaleDescription] = useState('');
+
+
     const [carNumber, setCarNumber] = useState('');
     const [carTypeMap, setCarTypeMap] = useState('');
     const [carType, setCarType] = useState(0);
     const [specialist, setSpecialist] = useState('');
     const [administrator, setAdministrator] = useState('');
     const [comments, setComments] = useState('');
+
+    const [files, setFiles] = useState([]);
 
     const updateItem = (name, value) => {
         if (!checkIfItemExists(name)) {
@@ -148,6 +164,29 @@ const CreatingPolishingOrder = observer(() => {
             );
         }
     };
+
+    const filesOptions = files.map(file => ({
+        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+        value: file.id
+    }));
+
+    async function getAllImages() {
+        try {
+            const response = await getAllSales();
+            setFiles(response);
+        } catch (error) {
+            if (error.response) {
+                alert(error.response.data.message)
+            } else {
+                alert("Системная ошибка, попробуйте позже")
+            }
+        }
+    }
+
+    useEffect(() => {
+        getAllImages();
+    }, []);
+
 
     const getItemValueByName = (name) => {
         const item = itemsCount.find(item => item.name === name);
@@ -377,14 +416,11 @@ const CreatingPolishingOrder = observer(() => {
         setIsSubmitting(true);
         setSubmitTime(Date.now());
         try {
-            console.log(selectedItems.map(i => i.replace(/ /g, '_')))
-            console.log(currentOrderStatusMapFromRus[currentStatus])
 
             const response = await createPolishingOrder(selectedItems, userContacts,
                 requestStartTime.toISOString(), requestEndTime.toISOString(),
                 administrator, specialist, boxNumber, bonuses, comments,
-                carNumber, carType, price, currentOrderStatusMapFromRus[currentStatus]);
-            console.log(response)
+                carNumber, carType, price, currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
             setSuccessResponse(null)
 
             const ordersForResponse = response.orders.map(order => `"${order}"`);
@@ -597,8 +633,20 @@ const CreatingPolishingOrder = observer(() => {
             </Button>
 
             <div className="label-container">
-                <div className="price-label">Цена услуг: {price}</div>
-                <div className="order-time-label">Время выполнения: {orderTime}</div>
+                <InputFieldNear
+                    label='Цена услуги:'
+                    id='price'
+                    value={price}
+                    inputStyle={inputStyleForPriceTime}
+                    onChange={setPrice}
+                />
+                <InputFieldNear
+                    label='Время выполнения:'
+                    id='time'
+                    value={orderTime}
+                    inputStyle={inputStyleForPriceTime}
+                    onChange={setOrderTime}
+                />
             </div>
 
             <p style={importantInputStyle}>Расписание с доступным временем</p>
@@ -646,6 +694,21 @@ const CreatingPolishingOrder = observer(() => {
                     onChange={setCurrentStatus}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
+                />
+
+                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+
+                <InputPicker
+                    data={filesOptions}
+                    inputStyle={inputStyle}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    value={selectedSaleDescription}
+                    menuStyle={{fontSize: "17px"}}
+
+                    onChange={(selectedValue) => {
+                        const selectedFile = files.find(file => file.id === selectedValue);
+                        setSelectedSaleDescription(selectedFile.description);
+                    }}
                 />
 
                 <InputField

@@ -23,6 +23,9 @@ import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
+import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
+import {getAllSales} from "../http/userAPI";
+import InputFieldNear from "../model/InputFieldNear";
 
 const orderStatusArray = [
     "Отменён",
@@ -82,6 +85,13 @@ const smallInputStyle = {
     display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
+const inputStyleForPriceTime = {
+    fontWeight: 'bold', display: 'flex',
+    fontSize: '17px', justifyContent: 'center', alignItems: 'center',
+    margin: '5px', padding: '5px', border: '1px solid #ccc',
+    backgroundColor: '#fff', borderRadius: '5px', boxSizing: 'border-box'
+};
+
 const CreatingWashingOrder = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
@@ -111,6 +121,10 @@ const CreatingWashingOrder = observer(() => {
     const [price, setPrice] = useState(0);
 
 
+    const [selectedSaleDescription, setSelectedSaleDescription] = useState('');
+    const [files, setFiles] = useState([]);
+
+
     const [orderTime, setOrderTime] = useState(0);
     const [bonuses, setBonuses] = useState(0);
     const [boxNumber, setBoxNumber] = useState(0);
@@ -136,6 +150,28 @@ const CreatingWashingOrder = observer(() => {
     const [specialist, setSpecialist] = useState('');
     const [administrator, setAdministrator] = useState('');
     const [comments, setComments] = useState('');
+
+    const filesOptions = files.map(file => ({
+        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+        value: file.id
+    }));
+
+    async function getAllImages() {
+        try {
+            const response = await getAllSales();
+            setFiles(response);
+        } catch (error) {
+            if (error.response) {
+                alert(error.response.data.message)
+            } else {
+                alert("Системная ошибка, попробуйте позже")
+            }
+        }
+    }
+
+    useEffect(() => {
+        getAllImages();
+    }, []);
 
     const updateItem = (name, value) => {
         if (!checkIfItemExists(name)) {
@@ -651,9 +687,22 @@ const CreatingWashingOrder = observer(() => {
                 Узнать цену заказа, время и доступное расписание
             </Button>
 
+
             <div className="label-container">
-                <div className="price-label">Цена услуг: {price}</div>
-                <div className="order-time-label">Время выполнения: {orderTime}</div>
+                <InputFieldNear
+                    label='Цена услуги:'
+                    id='price'
+                    value={price}
+                    inputStyle={inputStyleForPriceTime}
+                    onChange={setPrice}
+                />
+                <InputFieldNear
+                    label='Время выполнения:'
+                    id='time'
+                    value={orderTime}
+                    inputStyle={inputStyleForPriceTime}
+                    onChange={setOrderTime}
+                />
             </div>
 
             <p style={importantInputStyle}>Расписание с доступным временем</p>
@@ -701,6 +750,21 @@ const CreatingWashingOrder = observer(() => {
                     onChange={setCurrentStatus}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
+                />
+
+                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+
+                <InputPicker
+                    data={filesOptions}
+                    inputStyle={inputStyle}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    value={selectedSaleDescription}
+                    menuStyle={{fontSize: "17px"}}
+
+                    onChange={(selectedValue) => {
+                        const selectedFile = files.find(file => file.id === selectedValue);
+                        setSelectedSaleDescription(selectedFile.description);
+                    }}
                 />
 
                 <InputField

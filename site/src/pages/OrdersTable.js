@@ -180,6 +180,12 @@ const columns = [
         },
     },
     {
+        Header: 'Акция',
+        accessor: 'sale',
+        sortType: 'alphanumeric',
+        Cell: ({value}) => value ? value || value : "Неизвестно"
+    },
+    {
         Header: 'Цена',
         accessor: 'price',
         sortType: (rowA, rowB) => rowA.original.price - rowB.original.price,

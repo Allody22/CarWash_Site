@@ -24,6 +24,9 @@ import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
+import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
+import {getAllSales} from "../http/userAPI";
+import InputFieldNear from "../model/InputFieldNear";
 
 const orderStatusArray = [
     "Отменён",
@@ -77,6 +80,13 @@ const stylesForInput = {
     width: 190, marginBottom: 10, marginTop: 5
 };
 
+const inputStyleForPriceTime = {
+    fontWeight: 'bold', display: 'flex',
+    fontSize: '17px', justifyContent: 'center', alignItems: 'center',
+    margin: '5px', padding: '5px', border: '1px solid #ccc',
+    backgroundColor: '#fff', borderRadius: '5px', boxSizing: 'border-box'
+};
+
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
@@ -115,6 +125,9 @@ const CreatingTireOrder = observer(() => {
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
     const [endTime, setEndTime] = useState('');
+
+    const [selectedSaleDescription, setSelectedSaleDescription] = useState('');
+    const [files, setFiles] = useState([]);
 
     const [requestEndTime, setRequestEndTime] = useState(new Date());
     const [requestStartTime, setRequestStartTime] = useState(new Date());
@@ -249,6 +262,28 @@ const CreatingTireOrder = observer(() => {
         getAllServices();
     }, []);
 
+    const filesOptions = files.map(file => ({
+        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+        value: file.id
+    }));
+
+    async function getAllImages() {
+        try {
+            const response = await getAllSales();
+            setFiles(response);
+        } catch (error) {
+            if (error.response) {
+                alert(error.response.data.message)
+            } else {
+                alert("Системная ошибка, попробуйте позже")
+            }
+        }
+    }
+
+    useEffect(() => {
+        getAllImages();
+    }, []);
+
     const handleOpenModal = () => setShowModal(true);
     const handleCloseModal = () => setShowModal(false);
 
@@ -356,9 +391,10 @@ const CreatingTireOrder = observer(() => {
         try {
 
             const response = await createTireOrder(selectedItems.map(i => i.replace(/ /g, '_')), userContacts,
-                wheelR, requestStartTime.toISOString(), requestEndTime.toISOString(),
-                administrator, specialist, boxNumber, bonuses, comments,
-                carNumber, null, price,  currentOrderStatusMapFromRus[currentStatus]);
+                wheelR, requestStartTime.toISOString(),
+                requestEndTime.toISOString(), administrator, specialist,
+                boxNumber, bonuses, comments, carNumber, null, price,
+                currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
             setSuccessResponse(null)
 
             const ordersForResponse = response.orders.map(order => `"${order}"`);
@@ -639,9 +675,22 @@ const CreatingTireOrder = observer(() => {
                 Узнать цену заказа, время и доступное расписание
             </Button>
 
+
             <div className="label-container">
-                <div className="price-label">Цена услуг: {price}</div>
-                <div className="order-time-label">Время выполнения: {orderTime}</div>
+                <InputFieldNear
+                    label='Цена услуги:'
+                    id='price'
+                    value={price}
+                    inputStyle={inputStyleForPriceTime}
+                    onChange={setPrice}
+                />
+                <InputFieldNear
+                    label='Время выполнения:'
+                    id='time'
+                    value={orderTime}
+                    inputStyle={inputStyleForPriceTime}
+                    onChange={setOrderTime}
+                />
             </div>
 
             <p style={importantInputStyle}>Расписание с доступным временем</p>
@@ -691,6 +740,22 @@ const CreatingTireOrder = observer(() => {
                     style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
                 />
+
+                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+
+                <InputPicker
+                    data={filesOptions}
+                    inputStyle={inputStyle}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
+                    value={selectedSaleDescription}
+                    menuStyle={{fontSize: "17px"}}
+
+                    onChange={(selectedValue) => {
+                        const selectedFile = files.find(file => file.id === selectedValue);
+                        setSelectedSaleDescription(selectedFile.description);
+                    }}
+                />
+
                 <InputField
                     label='Специалист:'
                     inputStyle={inputStyle}

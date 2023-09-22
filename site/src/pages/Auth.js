@@ -21,6 +21,7 @@ const Auth = observer(() => {
     const loginClick = async () => {
         try {
             const data = await login(email, password);
+            console.log(data)
             user.setUser(data)
             user.setIsAuth(true)
             history.push(ADMIN_ROUTE)

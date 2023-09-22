@@ -15,7 +15,6 @@ import UpdateOrderInfo from "./pages/UpdateOrderInfo";
 import ChangeServiceInfoFromEng from "./pages/ChangeServiceInfoFromEng";
 import AddNewService from "./pages/AddNewService";
 import SalePage from "./pages/SalePage";
-import NewSalePage from "./pages/NewSalePage";
 
 
 export const authRoutes = [
@@ -46,10 +45,6 @@ export const authRoutes = [
     {
         path:CHECK_SALES,
         Component: SalePage
-    },
-    {
-        path:NEW_SALE,
-        Component: NewSalePage
     },
     {
         path:UPDATE_ORDER_INFO_ROUTE,

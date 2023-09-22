@@ -116,7 +116,7 @@ export const createNewService = async (serviceType, orderName, priceFirstType, p
 export const createTireOrder = async (orders, userContacts, wheelR, startTime,
                                       endTime, administrator, specialist, boxNumber,
                                       bonuses, comments, autoNumber,
-                                      autoType, price, currentStatus) => {
+                                      autoType, price, currentStatus, sale) => {
     const requestBody = {
         orders: orders,
         userContacts: userContacts,
@@ -131,7 +131,8 @@ export const createTireOrder = async (orders, userContacts, wheelR, startTime,
         autoNumber: autoNumber,
         autoType: autoType,
         price: price,
-        currentStatus: currentStatus
+        currentStatus: currentStatus,
+        sale: sale
     };
     const response = await $authHost.post('api/orders/new/createTireOrder_v1', requestBody);
     return response.data;
@@ -142,7 +143,8 @@ export const updateOrderInfo = async (orderId, userPhone, orderType,
                                       price, wheelR,
                                       startTime, administrator, autoNumber,
                                       autoType, specialist, boxNumber, bonuses,
-                                      comments, executed, endTime, orders, currentStatus) => {
+                                      comments, executed, endTime,
+                                      orders, currentStatus, sale) => {
     const requestBody = {
         orderId: orderId,
         userPhone: userPhone,
@@ -160,7 +162,8 @@ export const updateOrderInfo = async (orderId, userPhone, orderType,
         price: price,
         executed: executed,
         orders: orders,
-        currentStatus: currentStatus
+        currentStatus: currentStatus,
+        sale: sale
     };
     const response = await  $authHost.post('api/orders/management/updateOrderInfo_v1', requestBody);
     return response.data;
@@ -255,7 +258,8 @@ export const updateTireService = async (price_r_13, price_r_14, price_r_15, pric
 
 export const createPolishingOrder = async (orders, userContacts, startTime,
                                            endTime, administrator, specialist, boxNumber,
-                                           bonuses, comments, autoNumber, autoType, price, currentStatus) => {
+                                           bonuses, comments, autoNumber, autoType,
+                                           price, currentStatus, sale) => {
     const requestBody = {
         orders: orders,
         userContacts: userContacts,
@@ -269,7 +273,8 @@ export const createPolishingOrder = async (orders, userContacts, startTime,
         autoNumber: autoNumber,
         autoType: autoType,
         price: price,
-        currentStatus: currentStatus
+        currentStatus: currentStatus,
+        sale : sale
     };
     const response = await $authHost.post('api/orders/new/createPolishingOrder_v1', requestBody);
     return response.data;
