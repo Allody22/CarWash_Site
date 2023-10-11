@@ -2,91 +2,34 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
-import {DatePicker, Notification, useToaster} from 'rsuite';
+import '../css/CommonStyles.css';
+import {DatePicker, Divider, InputNumber, InputPicker, Notification, useToaster} from 'rsuite';
 
 import addDays from 'date-fns/addDays';
-import {Divider} from 'rsuite';
 
 import 'rsuite/dist/rsuite.css';
 
-import Modal from "react-bootstrap/Modal";
-
-import {InputNumber, InputPicker} from 'rsuite';
 import InputField from "../model/InputField";
-import {
-    createTireOrder,
-    getAllTireServicesWithPriceAndTime,
-    getPriceAndFreeTime
-} from "../http/orderAPI";
+import {createTireOrder, getAllTireServicesWithPriceAndTime, getFreeTime, getPriceAndFreeTime} from "../http/orderAPI";
 import socketStore from "../store/SocketStore";
 import {observer} from "mobx-react-lite";
 import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
-import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
-import {getAllSales} from "../http/userAPI";
 import InputFieldNear from "../model/InputFieldNear";
-
-const orderStatusArray = [
-    "Отменён",
-    "Не оплачен и не сделан",
-    "Оплачен на 5 процентов и не сделан",
-    "Оплачен на 10 процентов и не сделан",
-    "Оплачен на 20 процентов и не сделан",
-    "Оплачен на 30 процентов и не сделан",
-    "Оплачен на 40 процентов и не сделан",
-    "Оплачен на 50 процентов и не сделан",
-    "Оплачен на 60 процентов и не сделан",
-    "Оплачен на 70 процентов и не сделан",
-    "Оплачен на 80 процентов и не сделан",
-    "Оплачен на 90 процентов и не сделан",
-    "Полностью оплачен и не сделан",
-    "Не оплачен, но сделан",
-    "Оплачен на 5 процентов и сделан",
-    "Оплачен на 10 процентов и сделан",
-    "Оплачен на 20 процентов и сделан",
-    "Оплачен на 30 процентов и сделан",
-    "Оплачен на 40 процентов и сделан",
-    "Оплачен на 50 процентов и сделан",
-    "Оплачен на 60 процентов и сделан",
-    "Оплачен на 70 процентов и сделан",
-    "Оплачен на 80 процентов и сделан",
-    "Оплачен на 90 процентов и сделан",
-    "Полностью оплачен и сделан"
-].map(item => ({label: item, value: item}));
-
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const importantInputStyle = {
-    fontWeight: 'bold', display: 'flex', color:'red',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const smallInputStyle = {
-    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const styles = {
-    width: 500, display: 'block',
-    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
-};
-
+import saleStore from "../store/SaleStore";
+import {orderStatusArray} from "../model/Constants";
+import MyCustomModal from "../model/MyCustomModal";
 
 const stylesForInput = {
     width: 190, marginBottom: 10, marginTop: 5
 };
 
-const inputStyleForPriceTime = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center',
-    margin: '5px', padding: '5px', border: '1px solid #ccc',
-    backgroundColor: '#fff', borderRadius: '5px', boxSizing: 'border-box'
+const styles = {
+    width: 500, display: 'block',
+    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
 };
-
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
@@ -95,19 +38,26 @@ const CreatingTireOrder = observer(() => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
+    const [selectedFileId, setSelectedFileId] = useState(null);
 
     const [itemsCount, setItemsCount] = useState([{name: '', value: 0}]);
     const [newTime, setNewTime] = useState([{startTime: null, endTime: null, box: 0}]);
 
     const [stringTimeForCurrentDay, setStringTimeForCurrentDay] = useState([]);
 
-    const [selectedItems, setSelectedItems] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([{
+        name: null, price_r_13: null,
+        price_r_14: null, price_r_15: null, price_r_16: null, price_r_17: null, price_r_18: null,
+        price_r_19: null, price_r_20: null, price_r_21: null, price_r_22: null, time_r_13: null,
+        time_r_14: null, time_r_15: null, time_r_16: null, time_r_17: null, time_r_18: null,
+        time_r_19: null, time_r_20: null, time_r_21: null, time_r_22: null, number: 0
+    }]);
     const [currentStatus, setCurrentStatus] = useState('');
 
     const [mainOrders, setMainOrders] = useState([{
         name: null, price_r_13: null,
         price_r_14: null, price_r_15: null, price_r_16: null, price_r_17: null, price_r_18: null,
-        price_r_19: null, price_r_20: null, price_r_21: null, price_r_22: null,
+        price_r_19: null, price_r_20: null, price_r_21: null, price_r_22: null, time_r_13: null,
         time_r_14: null, time_r_15: null, time_r_16: null, time_r_17: null, time_r_18: null,
         time_r_19: null, time_r_20: null, time_r_21: null, time_r_22: null,
     }]);
@@ -144,67 +94,113 @@ const CreatingTireOrder = observer(() => {
     const [administrator, setAdministrator] = useState('');
     const [comments, setComments] = useState('');
 
-    const updateItem = (name, value) => {
-        if (!checkIfItemExists(name)) {
-            const newItemToAdd = {name: name, value: value};
-            setItemsCount(prevItems => [...prevItems, newItemToAdd]);
-        } else {
-            setItemsCount(current =>
-                current.map(item => {
-                    if (item.name === name) {
-                        return {...item, value};
-                    } else {
-                        return item;
-                    }
-                })
-            );
-        }
-    };
 
-    const getItemValueByName = (name) => {
-        const item = itemsCount.find(item => item.name === name);
-        return item ? item.value : undefined;
+    const findSelectedItemByName = (name) => {
+        const item = selectedItems.find(item => item.name === name);
+        return item ? item.number : undefined;
     }
 
-    const checkIfItemExists = (name) => {
-        const item = itemsCount.find(item => item.name === name);
-        return !!item;
-    };
+    const updateSelectedItems = (itemName, updatedData) => {
+        setSelectedItems((prevSelectedItems) => {
+            const updatedItems = [...prevSelectedItems];
+            const selectedItem = updatedItems.find((item) => item.name === itemName);
 
-    const removeItem = (name) => {
-        setItemsCount(current =>
-            current.filter(item => item.name !== name)
-        );
-    };
-
-    useEffect(() => {
-        const newSelectedItems = [];
-        for (let item of itemsCount) {
-            for (let i = 0; i < item.value; i++) {
-                newSelectedItems.push(item.name);
+            if (selectedItem) {
+                // Обновляем существующий элемент
+                selectedItem.price_r_13 = updatedData.price_r_13;
+                selectedItem.price_r_14 = updatedData.price_r_14;
+                selectedItem.price_r_15 = updatedData.price_r_15;
+                selectedItem.price_r_16 = updatedData.price_r_16;
+                selectedItem.price_r_17 = updatedData.price_r_17;
+                selectedItem.price_r_18 = updatedData.price_r_18;
+                selectedItem.price_r_19 = updatedData.price_r_19;
+                selectedItem.price_r_20 = updatedData.price_r_20;
+                selectedItem.price_r_21 = updatedData.price_r_21;
+                selectedItem.price_r_22 = updatedData.price_r_22;
+                selectedItem.time_r_13 = updatedData.time_r_13;
+                selectedItem.time_r_14 = updatedData.time_r_14;
+                selectedItem.time_r_15 = updatedData.time_r_15;
+                selectedItem.time_r_16 = updatedData.time_r_16;
+                selectedItem.time_r_17 = updatedData.time_r_17;
+                selectedItem.time_r_18 = updatedData.time_r_18;
+                selectedItem.time_r_19 = updatedData.time_r_19;
+                selectedItem.time_r_20 = updatedData.time_r_20;
+                selectedItem.time_r_21 = updatedData.time_r_21;
+                selectedItem.time_r_22 = updatedData.time_r_22;
+                selectedItem.number = updatedData.number;
+                return updatedItems;
+            } else {
+                // Добавляем новый элемент
+                const newItem = {
+                    name: itemName,
+                    price_r_13: updatedData.price_r_13,
+                    price_r_14: updatedData.price_r_14,
+                    price_r_15: updatedData.price_r_15,
+                    price_r_16: updatedData.price_r_16,
+                    price_r_17: updatedData.price_r_17,
+                    price_r_18: updatedData.price_r_18,
+                    price_r_19: updatedData.price_r_19,
+                    price_r_20: updatedData.price_r_20,
+                    price_r_21: updatedData.price_r_21,
+                    price_r_22: updatedData.price_r_22,
+                    time_r_13: updatedData.time_r_13,
+                    time_r_14: updatedData.time_r_14,
+                    time_r_15: updatedData.time_r_15,
+                    time_r_16: updatedData.time_r_16,
+                    time_r_17: updatedData.time_r_17,
+                    time_r_18: updatedData.time_r_18,
+                    time_r_19: updatedData.time_r_19,
+                    time_r_20: updatedData.time_r_20,
+                    time_r_21: updatedData.time_r_21,
+                    time_r_22: updatedData.time_r_22,
+                    number: updatedData.number
+                };
+                updatedItems.push(newItem);
+                return updatedItems;
             }
-        }
-        setSelectedItems(newSelectedItems);
-    }, [itemsCount]);
+        });
+    };
+
 
     const handleItemChange = (item, value) => {
-        updateItem(item, value);
-
         if (value === '0') {
-            removeItem(item);
+            const updatedSelectedItems = selectedItems.filter(selectedItem => selectedItem.name !== item.name);
+            setSelectedItems(updatedSelectedItems);
+        } else {
+            const updatedData = {
+                price_r_13: item.price_r_13,
+                price_r_14: item.price_r_14,
+                price_r_15: item.price_r_15,
+                price_r_16: item.price_r_16,
+                price_r_17: item.price_r_17,
+                price_r_18: item.price_r_18,
+                price_r_19: item.price_r_19,
+                price_r_20: item.price_r_20,
+                price_r_21: item.price_r_21,
+                price_r_22: item.price_r_22,
+                time_r_13: item.time_r_13,
+                time_r_14: item.time_r_14,
+                time_r_15: item.time_r_15,
+                time_r_16: item.time_r_16,
+                time_r_17: item.time_r_17,
+                time_r_18: item.time_r_18,
+                time_r_19: item.time_r_19,
+                time_r_20: item.time_r_20,
+                time_r_21: item.time_r_21,
+                time_r_22: item.time_r_22,
+                number: value
+            };
+
+            updateSelectedItems(item.name, updatedData);
         }
     };
 
 
-    const handleGetPrice = async (e) => {
+    const handleGetFreeTime = async (e) => {
         e.preventDefault();
         try {
 
-            const response = await getPriceAndFreeTime(selectedItems.map(i => i.replace(/ /g, '_')),
-                null, "tire", wheelR, start.toISOString(), end.toISOString());
-
-            setPrice(response.price);
-            setOrderTime(response.time);
+            const response = await getFreeTime(orderTime, "tire", start.toISOString(), end.toISOString());
 
             const newTimeArray = response.availableTime.map(time => ({
                 startTime: time.startTime,
@@ -215,12 +211,89 @@ const CreatingTireOrder = observer(() => {
             setNewTime(newTimeArray);
         } catch (error) {
             if (error.response) {
-                alert(error.response.data.message)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));
+                setErrorFlag(flag => !flag);
+
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                setErrorResponse("Системная ошибка с получением цены. " +
+                    "Попробуйте перезагрузить страницу")
+                setErrorFlag(flag => !flag)
             }
         }
     }
+
+
+    useEffect(() => {
+        const wheelRWithoutR = wheelR.slice(1); // Убираем первый символ "R"
+        const wheelRInt = parseInt(wheelRWithoutR, 10); // Преобразуем в число
+
+        const updatedItems = selectedItems.map((item) => {
+            let price = 0;
+            let time = 0;
+            switch (wheelRInt) {
+                case 13:
+                    price = item.price_r_13 * item.number;
+                    time = item.time_r_13 * item.number;
+                    break;
+                case 14:
+                    price = item.price_r_14 * item.number;
+                    time = item.time_r_14 * item.number;
+                    break;
+                case 15:
+                    price = item.price_r_15 * item.number;
+                    time = item.time_r_15 * item.number;
+                    break;
+                case 16:
+                    price = item.price_r_16 * item.number;
+                    time = item.time_r_16 * item.number;
+                    break;
+                case 17:
+                    price = item.price_r_17 * item.number;
+                    time = item.time_r_17 * item.number;
+                    break;
+                case 18:
+                    price = item.price_r_18 * item.number;
+                    time = item.time_r_18 * item.number;
+                    break;
+                case 19:
+                    price = item.price_r_19 * item.number;
+                    time = item.time_r_19 * item.number;
+                    break;
+                case 20:
+                    price = item.price_r_20 * item.number;
+                    time = item.time_r_20 * item.number;
+                    break;
+                case 21:
+                    price = item.price_r_21 * item.number;
+                    time = item.time_r_21 * item.number;
+                    break;
+                case 22:
+                    price = item.price_r_22 * item.number;
+                    time = item.time_r_22 * item.number;
+                    break;
+                default:
+                    price = 0;
+                    time = 0;
+                    break;
+            }
+
+            return {
+                price,
+                time,
+            };
+        });
+
+        const totalPrice = updatedItems.reduce((total, item) => total + item.price, 0);
+        const totalOrderTime = updatedItems.reduce((total, item) => total + item.time, 0);
+
+
+        setPrice(totalPrice);
+        setOrderTime(totalOrderTime);
+    }, [wheelR, selectedItems]);
 
 
     useEffect(() => {
@@ -252,9 +325,17 @@ const CreatingTireOrder = observer(() => {
                 setMainOrders(filteredOrdersMain);
             } catch (error) {
                 if (error.response) {
-                    alert(error.response.data.message)
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                    setErrorFlag(flag => !flag);
+
                 } else {
-                    alert("Системная ошибка, попробуйте позже")
+                    setErrorResponse("Системная ошибка. " +
+                        "Попробуйте еще раз")
+                    setErrorFlag(flag => !flag)
                 }
             }
         }
@@ -262,27 +343,41 @@ const CreatingTireOrder = observer(() => {
         getAllServices();
     }, []);
 
+    useEffect(() => {
+        if (saleStore?.error) {
+            const errorResponseMessage = (
+                <Notification
+                    type="error"
+                    header="Ошибка!"
+                    closable
+                    style={{border: '1px solid black'}}
+                >
+                    <div style={{width: 320}}>
+                        {saleStore.error}
+                    </div>
+                </Notification>
+            );
+
+            toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            saleStore.error = null; // Очищаем ошибку после показа
+        }
+    }, [saleStore?.error]);
+
+
     const filesOptions = files.map(file => ({
-        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+        label: `${file.name} - ${file.description}`,
         value: file.id
     }));
 
-    async function getAllImages() {
-        try {
-            const response = await getAllSales();
-            setFiles(response);
-        } catch (error) {
-            if (error.response) {
-                alert(error.response.data.message)
-            } else {
-                alert("Системная ошибка, попробуйте позже")
-            }
-        }
-    }
 
     useEffect(() => {
-        getAllImages();
-    }, []);
+        if (saleStore.discounts.length === 0) {
+            saleStore.loadDiscounts();
+        } else {
+            setFiles(saleStore.discounts);
+        }
+    }, [saleStore.discounts]);
+
 
     const handleOpenModal = () => setShowModal(true);
     const handleCloseModal = () => setShowModal(false);
@@ -325,8 +420,10 @@ const CreatingTireOrder = observer(() => {
                         <>
                             <div style={{textAlign: 'left'}}>
                                 <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
-                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
-                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время начала
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
                             </div>
                         </>
                     )}
@@ -389,8 +486,12 @@ const CreatingTireOrder = observer(() => {
         setIsSubmitting(true);
         setSubmitTime(Date.now());
         try {
+            const namesArray = selectedItems.flatMap((item) => {
+                const {name, number} = item;
+                return Array.from({length: number}, () => name);
+            });
 
-            const response = await createTireOrder(selectedItems.map(i => i.replace(/ /g, '_')), userContacts,
+            const response = await createTireOrder(namesArray.map((name) => name.replace(/ /g, '_')), userContacts,
                 wheelR, requestStartTime.toISOString(),
                 requestEndTime.toISOString(), administrator, specialist,
                 boxNumber, bonuses, comments, carNumber, null, price,
@@ -413,8 +514,13 @@ const CreatingTireOrder = observer(() => {
             setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
-                setErrorResponse(error.response.data.message)
-                setErrorFlag(flag => !flag)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorFlag(flag => !flag);
+
             } else {
                 setErrorResponse("Системная ошибка, проверьте правильность " +
                     "введённой информации и попробуйте еще раз")
@@ -467,168 +573,148 @@ const CreatingTireOrder = observer(() => {
     ];
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления заказов на шиномонтаж</p>
-            <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
+            <p className="input-style-modified">Страница добавления заказов на шиномонтаж</p>
+            <p className="small-input-style">Здесь вы можете сами создать какой-то заказ
                 на шиномонтаж из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, диаметр колёс,
-                набор услуг и состояние заказа</p>
+            <p className="small-input-style"><strong>Обязательно</strong> выберите все элементы под красным
+                текстом</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
             </Button>
-            <Modal show={showModal}
-                   onHide={handleCloseModal}
-                   dialogClassName="custom-modal-dialog-tire"
-            className="">
-                <Modal.Header closeButton>
-                    <Modal.Title>Выберите заказы</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
+
+            <MyCustomModal show={showModal} handleClose={handleCloseModal} title="Выберите заказы">
+                <div style={{overflowY: 'auto', maxHeight: '80vh'}}>
                     {mainOrders.map((item, index) => (
                         <div key={index} style={{
                             fontSize: '16px',
                             borderBottom: '1px solid lightgray',
                             paddingBottom: '10px',
-                            paddingTop: '10px'
+                            paddingTop: '10px',
                         }}>
                             <div style={{textAlign: 'center'}}>
                                 <span>{item.name}</span>
                             </div>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'auto 1fr',
                                 gap: '10px',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                gridTemplateColumns: 'auto 1fr',
+                                gridTemplateRows: 'repeat(3, auto)', // Добавляем три строки для Размеров, Времени и Цен
                             }}>
                                 <div style={{color: 'green'}}>Размеры:</div>
-                                <div style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '10px'}}>
-                                    <div>R13</div>
-                                    <div>R14</div>
-                                    <div>R15</div>
-                                    <div>R16</div>
-                                    <div>R17</div>
-                                    <div>R18</div>
-                                    <div>R19</div>
-                                    <div>R20</div>
-                                    <div>R21</div>
-                                    <div>R22</div>
-                                </div>
-                            </div>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'auto 1fr',
-                                gap: '10px',
-                                alignItems: 'center'
-                            }}>
-                                <div style={{color: 'blue', gridColumn: '1'}}>Время:</div>
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: 'repeat(10, 1fr)',
                                     gap: '10px',
-                                    gridColumn: '2'
+                                    gridTemplateColumns: 'repeat(10, 1fr)',
+                                    overflowX: 'auto'
                                 }}>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_13}</div>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_14}</div>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_15}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0'}{item.time_r_16}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_17}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_18}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_19}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_20}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.time_r_21}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.time_r_22}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R13</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R14</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R15</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R16</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R17</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R18</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R19</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R20</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R21</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>R22</div>
                                 </div>
-                            </div>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'auto 1fr',
-                                gap: '10px',
-                                alignItems: 'center'
-                            }}>
-                                <div style={{color: 'red', gridColumn: '1'}}>Цены:</div>
+                                <div style={{color: 'blue'}}>Время:</div>
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: 'repeat(10, 1fr)',
                                     gap: '10px',
-                                    gridColumn: '2'
+                                    gridTemplateColumns: 'repeat(10, 1fr)',
+                                    overflowX: 'auto'
                                 }}>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_13}</div>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_14}</div>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_15}</div>
-                                    <div
-                                        style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_16}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_17}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_18}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_19}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_20}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.price_r_21}</div>
-                                    <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.price_r_22}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_13}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_14}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_15}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_16}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_17}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_18}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_19}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_20}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_21}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.time_r_22}</div>
+                                </div>
+                                <div style={{color: 'red'}}>Цены:</div>
+                                <div style={{
+                                    display: 'grid',
+                                    gap: '10px',
+                                    gridTemplateColumns: 'repeat(10, 1fr)',
+                                    overflowX: 'auto'
+                                }}>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_13}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_14}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_15}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_16}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_17}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_18}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_19}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_20}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_21}</div>
+                                    <div style={{whiteSpace: 'nowrap'}}>{item.price_r_22}</div>
                                 </div>
                             </div>
                             <div style={{
                                 display: 'flex',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                marginTop: '10px',
                             }}>
                                 <InputNumber
                                     size="sm"
                                     placeholder="sm"
-                                    style={Object.assign({}, stylesForInput, {margin: '0 auto', marginTop: '10px'})}
+                                    style={Object.assign({}, stylesForInput, {margin: '0 auto'})}
                                     min={0}
-                                    onChange={value => handleItemChange(item.name, value)}
-                                    value={getItemValueByName(item.name) || 0}
+                                    onChange={value => handleItemChange(item, value)}
+                                    value={findSelectedItemByName(item.name) || 0}
                                 />
                             </div>
                         </div>
                     ))}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant='secondary' onClick={handleCloseModal}>
-                        Закрыть
-                    </Button>
-                </Modal.Footer>
-            </Modal>
-            {
-                selectedItems.length > 0 ? (
-                    <div className="selected-items-container text-center">
-                        <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
-                            Доп услуги:
-                        </Form.Label>
-                        <div className="selected-items">
-                            {selectedItems
-                                .filter((item, index) => selectedItems.indexOf(item) === index)
-                                .map((item) => {
-                                    if (getItemValueByName(item) > 0) {
-                                        return (
-                                            <span key={item} className="item">
-                  {`${item} (${getItemValueByName(item)})`}
-                </span>
-                                        );
+                </div>
+            </MyCustomModal>
+
+            {selectedItems.length > 0 ? (
+                <div className="selected-items-container text-center">
+                    <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
+                        Выбранные услуги:
+                    </Form.Label>
+                    <div className="selected-items">
+                        {Object.values(
+                            selectedItems.reduce((acc, item) => {
+                                if (item.number > 0) {
+                                    if (!acc[item.name]) {
+                                        acc[item.name] = {
+                                            name: item.name,
+                                            count: 0,
+                                        };
                                     }
-                                    return null;
-                                })}
-                        </div>
+                                    acc[item.name].count = item.number;
+                                }
+                                return acc;
+                            }, {})
+                        ).map((groupedItem) => (
+                            <span key={groupedItem.name} className="item">
+                    {`${groupedItem.name} (${groupedItem.count})`}
+                </span>
+                        ))}
                     </div>
-                ) : (
+                </div>
+            ) : (
+                <div className='selected-items-container text-center'>
+                    <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
+                        Выбранные услуги:
+                    </Form.Label>
                     <div className='selected-items-container text-center'>
-                        <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
-                            Дополнительные услуги:
-                        </Form.Label>
-                        <div className='selected-items-container text-center'>
-                        <span className='empty-list' style={{fontSize: '1.1em'}}>
-                            Нет дополнительных услуг
-                        </span>
-                        </div>
+            <span className='empty-list' style={{fontSize: '1.1em'}}>
+                Нет выбранных услуги
+            </span>
                     </div>
-                )
-            }
+                </div>)}
             <Divider></Divider>
-            <p style={importantInputStyle}>Выберите размер колёс</p>
+            <p className="important-input-style">Выберите размер колёс</p>
             <InputPicker
                 data={wheelSizeArray}
                 value={wheelR}
@@ -637,7 +723,7 @@ const CreatingTireOrder = observer(() => {
                 menuStyle={{fontSize: "17px"}}
             />
 
-            <p style={importantInputStyle}>Выберите день заказа</p>
+            <p className="important-input-style">Выберите день заказа</p>
             <DatePicker
                 isoWeek
                 locale={{
@@ -671,8 +757,8 @@ const CreatingTireOrder = observer(() => {
                 }}
             />
 
-            <Button className='full-width' appearance="primary" block onClick={handleGetPrice}>
-                Узнать цену заказа, время и доступное расписание
+            <Button className='full-width' appearance="primary" block onClick={handleGetFreeTime}>
+                Узнать доступное расписание
             </Button>
 
 
@@ -681,19 +767,19 @@ const CreatingTireOrder = observer(() => {
                     label='Цена услуги:'
                     id='price'
                     value={price}
-                    inputStyle={inputStyleForPriceTime}
+                    className="input-style-for-price-time"
                     onChange={setPrice}
                 />
                 <InputFieldNear
                     label='Время выполнения:'
                     id='time'
                     value={orderTime}
-                    inputStyle={inputStyleForPriceTime}
+                    className="input-style-for-price-time"
                     onChange={setOrderTime}
                 />
             </div>
 
-            <p style={importantInputStyle}>Расписание с доступным временем</p>
+            <p className="important-input-style">Расписание с доступным временем</p>
 
             <InputPicker
                 data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
@@ -719,19 +805,19 @@ const CreatingTireOrder = observer(() => {
                 <InputField
                     label='Номер телефона клиента:'
                     id='name'
+                    className="input-style"
                     value={userContacts}
-                    inputStyle={inputStyle}
                     onChange={setUserContacts}
                 />
                 <InputField
                     label='Номер автомобиля:'
                     id='carNumber'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={carNumber}
                     onChange={setCarNumber}
                 />
 
-                <p style={importantInputStyle}>Выберите состояние заказа</p>
+                <p className="important-input-style">Выберите состояние заказа</p>
 
                 <InputPicker
                     data={orderStatusArray}
@@ -741,24 +827,23 @@ const CreatingTireOrder = observer(() => {
                     menuStyle={{fontSize: "17px"}}
                 />
 
-                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+                <p className="input-style">Выберите акцию, если необходимо</p>
 
                 <InputPicker
                     data={filesOptions}
-                    inputStyle={inputStyle}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
-                    value={selectedSaleDescription}
+                    value={selectedFileId} // здесь изменено на selectedFileId
                     menuStyle={{fontSize: "17px"}}
-
                     onChange={(selectedValue) => {
                         const selectedFile = files.find(file => file.id === selectedValue);
+                        setSelectedFileId(selectedValue); // сохраняем ID файла
                         setSelectedSaleDescription(selectedFile.description);
                     }}
                 />
 
                 <InputField
                     label='Специалист:'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
@@ -766,21 +851,21 @@ const CreatingTireOrder = observer(() => {
                 <InputField
                     label='Администратор:'
                     id='administrator'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={administrator}
                     onChange={setAdministrator}
                 />
                 <InputField
                     label='Количество использованных бонусов:'
                     id='bonuses'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={bonuses}
                     onChange={setBonuses}
                 />
                 <InputField
                     label='Комментарии:'
                     id='comments'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={comments}
                     onChange={setComments}
                 />

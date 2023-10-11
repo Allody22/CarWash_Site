@@ -1,70 +1,40 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
-import {
-    InputPicker,
-    Notification, TagPicker, toaster,
-    useToaster,
-} from 'rsuite';
+import {InputPicker, Notification, TagPicker, useToaster,} from 'rsuite';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
+import '../css/CommonStyles.css';
 
 import 'rsuite/dist/rsuite.css';
 
 import Modal from "react-bootstrap/Modal";
 
 import InputField from "../model/InputField";
-import {
-    createNewService
-} from "../http/orderAPI";
+import {createNewService} from "../http/orderAPI";
 import orderTypeMapFromRussian from "../model/map/OrderTypeMapFromRussian";
 import connectedServiceMap from "../model/map/ConnectedServiceMap";
 import includedServiceMap from "../model/map/IncludedServiceMap";
 import {observer} from "mobx-react-lite";
 import socketStore from "../store/SocketStore";
-import {BrowserRouter as Router, Link, useHistory} from "react-router-dom";
+import {BrowserRouter as Router} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 
-const smallInputStyle = {
-    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
 
-const serviceTypesArray = [
-    'Шиномонтаж',
-    'Мойка',
-    'Полировка'
-].map(item => ({label: item, value: item}));
+const toLabelValueArray = (items) => items.map(item => ({label: item, value: item}));
 
-const washingTypesArray = [
-    'VIP',
-    'ELITE',
-    'Стандарт',
-    'Эконом'
-].map(item => ({label: item, value: item}));
-
-const rolesTypesArray = [
-    'Главная',
-    'Дополнительная'
-].map(item => ({label: item, value: item}));
+const serviceTypesArray = toLabelValueArray(['Шиномонтаж', 'Мойка', 'Полировка']);
+const washingTypesArray = toLabelValueArray(['VIP', 'ELITE', 'Стандарт', 'Эконом']);
+const rolesTypesArray = toLabelValueArray(['Главная', 'Дополнительная']);
 
 const styles = {
     width: 500, display: 'block',
     marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
 };
 
-const stylesUnderButton = {
-    width: 500, display: 'block',
-    marginBottom: 35, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
-};
-
-
 const AddNewService = observer(() => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitTime, setSubmitTime] = useState(0);
+    const [isSubmitting] = useState(false);
+    const [submitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
 
     const [showModalB, setShowModalB] = useState(false);
@@ -113,8 +83,10 @@ const AddNewService = observer(() => {
                         <>
                             <div style={{textAlign: 'left'}}>
                                 <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
-                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
-                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время начала
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
                             </div>
                         </>
                     )}
@@ -274,7 +246,7 @@ const AddNewService = observer(() => {
                     getTimeByWheelR('21'), getTimeByWheelR('22'),
                     orderTypeMapFromRussian[role], [...washingTypeIncludedEnglish, ...washingTypeConnectedEnglish])
                 setSuccessResponse(null)
-                setSuccessResponse("В базе данных появилась услуга '" + (response.name).replaceAll('_',' ') + "'")
+                setSuccessResponse("В базе данных появилась услуга '" + (response.name).replaceAll('_', ' ') + "'")
             } catch
                 (error) {
                 if (error.response) {
@@ -306,18 +278,19 @@ const AddNewService = observer(() => {
 
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления новой услуги</p>
-            <p style={smallInputStyle}>Вся информация о новой услуге появится в базе данных</p>
+            <p className="input-style-modified">Страница добавления новой услуги</p>
+            <p className="small-input-style">Вся информация о новой услуге появится в базе данных</p>
 
             <p style={{
                 fontWeight: 'bold', display: 'flex',
                 fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
             }}>Выберите тип услуги</p>
+
             <InputPicker
                 data={serviceTypesArray}
                 value={serviceType}
+                style={{...styles, WebkitTextFillColor: "#000000", marginBottom: 10}}
                 onChange={setServiceType}
-                style={{...styles, WebkitTextFillColor: "#000000"}}
                 menuStyle={{fontSize: "17px"}}
             />
 
@@ -325,7 +298,7 @@ const AddNewService = observer(() => {
                 label='Название услуги'
                 id='orderName'
                 value={orderName}
-                inputStyle={inputStyle}
+                className="input-style"
                 onChange={setOrderName}
             />
 
@@ -400,42 +373,42 @@ const AddNewService = observer(() => {
                     label='Цена за 1 тип кузова'
                     id='priceFirstType'
                     value={priceFirstType}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setPriceFirstType}
                 />
                 <InputField
                     label='Цена за 2 тип кузова'
                     id='priceSecondType'
                     value={priceSecondType}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setPriceSecondType}
                 />
                 <InputField
                     label='Цена за 3 тип кузова'
                     id='priceFirstType'
                     value={priceThirdType}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setPriceThirdType}
                 />
                 <InputField
                     label='Примерное время выполнения с 1 типом кузова'
                     id='timeFirstType'
                     value={timeFirstType}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setTimeFirstType}
                 />
                 <InputField
                     label='Примерное время выполнения со 2 типом кузова'
                     id='timeSecondType'
                     value={timeSecondType}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setTimeSecondType}
                 />
                 <InputField
                     label='Примерное время выполнения с 3 типом кузова'
                     id='timeThirdType'
                     value={timeThirdType}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setTimeThirdType}
                 />
 
@@ -443,7 +416,7 @@ const AddNewService = observer(() => {
                     fontWeight: 'bold', display: 'flex',
                     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
                 }}>Выберите услугу, в которую она включена</p>
-                <p style={smallInputStyle}>Например "Мойка кузова 2 фазы без протирки" включена в Стандарт</p>
+                <p className="small-input-style">Например "Мойка кузова 2 фазы без протирки" включена в Стандарт</p>
 
                 <TagPicker data={washingTypesArray}
                            block
@@ -464,7 +437,7 @@ const AddNewService = observer(() => {
                     fontWeight: 'bold', display: 'flex',
                     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '15px'
                 }}>Выберите услугу, к которой она идёт как дополнительная</p>
-                <p style={smallInputStyle}>Например "Чернение шин 4" можно взять вместе со Стандартной мойкой</p>
+                <p className="small-input-style">Например "Чернение шин 4" можно взять вместе со Стандартной мойкой</p>
 
                 <TagPicker data={washingTypesArray}
                            block
@@ -485,20 +458,20 @@ const AddNewService = observer(() => {
                     fontWeight: 'bold', display: 'flex',
                     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '10px'
                 }}>Выберите роль услуги</p>
-                <p style={smallInputStyle}>Например "Турбо сушка кузова" имеют роль "дополнительная"</p>
+                <p className="small-input-style">Например "Турбо сушка кузова" имеют роль "дополнительная"</p>
 
                 <InputPicker
                     data={rolesTypesArray}
                     value={role}
+                    style={{...styles, WebkitTextFillColor: "#000000", marginBottom: 35}}
                     onChange={setRole}
-                    style={{...stylesUnderButton, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "14px"}}
                 />
 
                 {showConfirmation && (
                     <div className='confirmation-container'>
                         <div className='confirmation-message'>
-                            <p style={inputStyle}>Вы уверены, что хотите отправить запрос?</p>
+                            <p className="input-style">Вы уверены, что хотите отправить запрос?</p>
                             <p>Это изменит информацию об этом заказе ВО ВСЕЙ базе данных для ВСЕХ</p>
                             <div className='confirmation-buttons'>
                                 <Button onClick={() => setShowConfirmation(false)}

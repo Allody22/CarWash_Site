@@ -1,16 +1,10 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
-import {
-    Notification, useToaster,
-} from 'rsuite';
+import {Notification, SelectPicker, useToaster,} from 'rsuite';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
 
-import {SelectPicker} from 'rsuite';
-
 import 'rsuite/dist/rsuite.css';
-
-import Modal from "react-bootstrap/Modal";
 
 import InputField from "../model/InputField";
 import {
@@ -27,32 +21,35 @@ import socketStore from "../store/SocketStore";
 import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
+import CustomModal from '../model/MyCustomModal';
 
-const smallInputStyle = {
-    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
+
 const inputStyle = {
     fontWeight: 'bold', display: 'flex',
     fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
 }
 
-const ChangeServiceInfoFromEng = observer(() => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitTime, setSubmitTime] = useState(0);
+const ChangeServiceInfo = observer(() => {
+    const [isSubmitting] = useState(false);
+    const [submitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
 
     const [showModalB, setShowModalB] = useState(false);
     useHistory();
     const [orderName, setOrderName] = useState(null);
 
+    const [prices, setPrices] = useState({
+        firstType: 0,
+        secondType: 0,
+        thirdType: 0
+    });
 
-    const [priceFirstType, setPriceFirstType] = useState(0);
-    const [priceSecondType, setPriceSecondType] = useState(0);
-    const [priceThirdType, setPriceThirdType] = useState(0);
+    const [times, setTimes] = useState({
+        firstType: 0,
+        secondType: 0,
+        thirdType: 0
+    });
 
-    const [timeFirstType, setTimeFirstType] = useState(0);
-    const [timeSecondType, setTimeSecondType] = useState(0);
-    const [timeThirdType, setTimeThirdType] = useState(0);
 
     const toaster = useToaster();
 
@@ -133,7 +130,14 @@ const ChangeServiceInfoFromEng = observer(() => {
                 setWheelSizeAndPrice([])
             } catch (error) {
                 if (error.response) {
-                    alert(error.response.data.message)
+
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join(''));
+                    setErrorFlag(flag => !flag);
+
                 } else {
                     alert("Системная ошибка, попробуйте позже")
                 }
@@ -143,11 +147,13 @@ const ChangeServiceInfoFromEng = observer(() => {
         getAllOrders();
     }, []);
 
-    const handleOpenModal = () => setShowModal(true);
-    const handleCloseModal = () => setShowModal(false);
+    const handleOpenModal = useCallback(() => setShowModal(true), []);
+    const handleCloseModal = useCallback(() => setShowModal(false), []);
+// и так далее для других функций
 
-    const handleOpenModalB = () => setShowModalB(true);
-    const handleCloseModalB = () => setShowModalB(false);
+
+    const handleOpenModalB = useCallback(() => setShowModalB(true), []);
+    const handleCloseModalB = useCallback(() => setShowModalB(false), []);
 
 
     const getItemTypeByName = (name) => {
@@ -179,75 +185,100 @@ const ChangeServiceInfoFromEng = observer(() => {
         }
     };
 
+    function setPricesValues({firstType, secondType, thirdType}) {
+        setPrices(prevState => ({
+            ...prevState,
+            firstType,
+            secondType,
+            thirdType,
+        }));
+    }
+
+    function setTimesValues({firstType, secondType, thirdType}) {
+        setTimes(prevState => ({
+            ...prevState,
+            firstType,
+            secondType,
+            thirdType,
+        }));
+    }
+
 
     useEffect(() => {
-            async function getServiceInfoRequest() {
-                const enOrderType = mapOrderTypeToCode(getItemTypeByName(orderName));
-                if (enOrderType !== -1) {
-                    try {
-                        const responseOfServiceInfo = await getServiceInfo(orderName.replace(/ /g, '_'),
-                            mapOrderTypeToCode(getItemTypeByName(orderName)));
+        async function getServiceInfoRequest() {
+            const enOrderType = mapOrderTypeToCode(getItemTypeByName(orderName));
+            if (enOrderType !== -1) {
+                try {
+                    const responseOfServiceInfo = await getServiceInfo(orderName.replace(/ /g, '_'), enOrderType);
 
-                        if (getItemTypeByName(orderName) === "Мойка") {
-                            setPriceFirstType(responseOfServiceInfo.priceFirstType)
-                            setPriceSecondType(responseOfServiceInfo.priceSecondType)
-                            setPriceThirdType(responseOfServiceInfo.priceThirdType)
-                            setTimeFirstType(responseOfServiceInfo.timeFirstType)
-                            setTimeSecondType(responseOfServiceInfo.timeSecondType)
-                            setTimeThirdType(responseOfServiceInfo.timeThirdType)
+                    if (getItemTypeByName(orderName) === "Мойка") {
+                        setPricesValues({
+                            firstType: responseOfServiceInfo.priceFirstType,
+                            secondType: responseOfServiceInfo.priceSecondType,
+                            thirdType: responseOfServiceInfo.priceThirdType,
+                        });
+                        setTimesValues({
+                            firstType: responseOfServiceInfo.timeFirstType,
+                            secondType: responseOfServiceInfo.timeSecondType,
+                            thirdType: responseOfServiceInfo.timeThirdType,
+                        });
+                        setWheelSizeAndTime([]);
+                        setWheelSizeAndPrice([]);
 
-                            setWheelSizeAndTime([]);
-                            setWheelSizeAndPrice([]);
+                    } else if (getItemTypeByName(orderName) === "Шиномонтаж") {
+                        const prices = [];
+                        const time = [];
+                        Object.keys(responseOfServiceInfo).forEach((key) => {
+                            if (key.startsWith('price_r_')) {
+                                prices.push({
+                                    level: key.replace('price_r_', ''),
+                                    price: responseOfServiceInfo[key],
+                                });
+                            } else if (key.startsWith('time_r_')) {
+                                time.push({
+                                    level: key.replace('time_r_', ''),
+                                    time: responseOfServiceInfo[key],
+                                });
+                            }
+                        });
+                        setWheelSizeAndPrice(prices);
+                        setWheelSizeAndTime(time);
+                        setPricesValues({firstType: 0, secondType: 0, thirdType: 0});
+                        setTimesValues({firstType: 0, secondType: 0, thirdType: 0});
 
-                        } else if (getItemTypeByName(orderName) === "Шиномонтаж") {
-                            const prices = [];
-                            const time = [];
-                            Object.keys(responseOfServiceInfo).forEach((key) => {
-                                if (key.startsWith('price_r_')) {
-                                    prices.push({
-                                        level: key.replace('price_r_', ''),
-                                        price: responseOfServiceInfo[key],
-                                    });
-                                } else if (key.startsWith('time_r_')) {
-                                    time.push({
-                                        level: key.replace('time_r_', ''),
-                                        time: responseOfServiceInfo[key],
-                                    });
-                                }
-                            });
-                            setWheelSizeAndPrice(prices)
-                            setWheelSizeAndTime(time)
-                            setPriceFirstType(0)
-                            setPriceSecondType(0)
-                            setPriceThirdType(0)
-                            setTimeFirstType(0)
-                            setTimeSecondType(0)
-                            setTimeThirdType(0)
-
-                        } else if (getItemTypeByName(orderName) === "Полировка") {
-                            setPriceFirstType(responseOfServiceInfo.priceFirstType)
-                            setPriceSecondType(responseOfServiceInfo.priceSecondType)
-                            setPriceThirdType(responseOfServiceInfo.priceThirdType)
-                            setTimeFirstType(responseOfServiceInfo.timeFirstType)
-                            setTimeSecondType(responseOfServiceInfo.timeSecondType)
-                            setTimeThirdType(responseOfServiceInfo.timeThirdType)
-                            setWheelSizeAndPrice([]);
-                            setWheelSizeAndTime([]);
+                    } else if (getItemTypeByName(orderName) === "Полировка") {
+                        setPricesValues({
+                            firstType: responseOfServiceInfo.priceFirstType,
+                            secondType: responseOfServiceInfo.priceSecondType,
+                            thirdType: responseOfServiceInfo.priceThirdType,
+                        });
+                        setTimesValues({
+                            firstType: responseOfServiceInfo.timeFirstType,
+                            secondType: responseOfServiceInfo.timeSecondType,
+                            thirdType: responseOfServiceInfo.timeThirdType,
+                        });
+                        setWheelSizeAndPrice([]);
+                        setWheelSizeAndTime([]);
+                    }
+                } catch (error) {
+                    if (error.response) {
+                        let messages = [];
+                        for (let key in error.response.data) {
+                            messages.push(error.response.data[key]);
                         }
-                    } catch (error) {
-                        if (error.response) {
-                            alert(error.response.data.message)
-                        } else {
-                            alert("Системная ошибка, попробуйте позже")
-                        }
+                        setErrorResponse(messages.join(''));
+                        setErrorFlag(flag => !flag);
+
+                    } else {
+                        alert("Системная ошибка, попробуйте позже")
                     }
                 }
             }
+        }
 
-            getServiceInfoRequest();
-        },
-        [orderName]
-    );
+        getServiceInfoRequest();
+    }, [orderName]);
+
 
     const setPriceByWheelRForNewInfo = (event, level) => {
         setWheelSizeAndPrice(prevState => {
@@ -317,38 +348,45 @@ const ChangeServiceInfoFromEng = observer(() => {
             toaster.push(message, {placement: "bottomEnd"});
         }
     }, [response]);
+
     const handleSubmit = async (event) => {
         event.preventDefault();
+
         if (showConfirmation) {
             try {
                 let response;
-                if (getItemTypeByName(orderName) === "Мойка") {
-                    response = await updateWashingService(priceFirstType, priceSecondType, priceThirdType, timeFirstType,
-                        timeSecondType, timeThirdType, orderName.replace(/ /g, '_'));
-                } else if (getItemTypeByName(orderName) === "Шиномонтаж") {
-                    response = await updateTireService(getPriceByWheelR('13'), getPriceByWheelR('14'),
-                        getPriceByWheelR('15'), getPriceByWheelR('16'), getPriceByWheelR('17'), getPriceByWheelR('18'),
-                        getPriceByWheelR('19'), getPriceByWheelR('20'), getPriceByWheelR('21'), getPriceByWheelR('22'),
-                        getTimeByWheelR('13'), getTimeByWheelR('14'),
-                        getTimeByWheelR('15'), getTimeByWheelR('16'), getTimeByWheelR('17'), getTimeByWheelR('18'),
-                        getTimeByWheelR('19'), getTimeByWheelR('20'), getTimeByWheelR('21'), getTimeByWheelR('22'),
-                        orderName.replace(/ /g, '_'));
-                } else if (getItemTypeByName(orderName) === "Полировка") {
-                    response = await updatePolishingService(priceFirstType, priceSecondType,
-                        priceThirdType, timeFirstType, timeSecondType, timeThirdType, orderName.replace(/ /g, '_'));
+                const serviceName = orderName.replace(/ /g, '_');
+
+                switch (getItemTypeByName(orderName)) {
+                    case "Мойка":
+                        response = await updateWashingService(prices.firstType, prices.secondType, prices.thirdType, times.firstType,
+                            times.secondType, times.thirdType, serviceName);
+                        break;
+
+                    case "Шиномонтаж":
+                        const pricesByWheelR = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map(size => getPriceByWheelR(String(size)));
+                        const timesByWheelR = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map(size => getTimeByWheelR(String(size)));
+                        response = await updateTireService(...pricesByWheelR, ...timesByWheelR, serviceName);
+                        break;
+
+                    case "Полировка":
+                        response = await updatePolishingService(prices.firstType, prices.secondType, prices.thirdType, times.firstType,
+                            times.secondType, times.thirdType, serviceName);
+                        break;
+
+                    default:
+                        throw new Error("Unknown service type");
                 }
-                setResponse(null);
+
                 setResponse(response.message);
-            } catch
-                (error) {
+
+            } catch (error) {
                 if (error.response) {
-                    setErrorResponse(error.response.data.message)
-                    setErrorFlag(flag => !flag)
+                    setErrorResponse(error.response.data.message);
                 } else {
-                    setErrorResponse("Системная ошибка, проверьте правильность " +
-                        "введённой информации и попробуйте еще раз")
-                    setErrorFlag(flag => !flag)
+                    setErrorResponse("Системная ошибка, проверьте правильность введённой информации и попробуйте еще раз");
                 }
+                setErrorFlag(flag => !flag);
             }
             setShowConfirmation(false);
         } else {
@@ -358,8 +396,9 @@ const ChangeServiceInfoFromEng = observer(() => {
 
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница изменения информации об услуге</p>
-            <p style={smallInputStyle}>Цена услуг и время их выполнения на сайте и в приложении берётся из базы данных,
+            <p className="input-style-modified">Страница изменения информации об услуге</p>
+            <p className="small-input-style">Цена услуг и время их выполнения на сайте и в приложении берётся из базы
+                данных,
                 если эту информацию необходимо обновить, то вы можете это сделать на этой странице</p>
 
             <p style={inputStyle}>Выберите услугу, информацию о которой хотите поменять</p>
@@ -378,111 +417,93 @@ const ChangeServiceInfoFromEng = observer(() => {
                 <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                     Посмотреть цену для различных видов шин (доступно только для заказов шиномонтажа)
                 </Button>
-                <Modal show={showModal}
-                       onHide={handleCloseModal}
-                       dialogClassName="custom-modal-dialog">
-                    <Modal.Header closeButton>
-                        <Modal.Title>Цены для различных диаметров колёс</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        {wheelSizeAndPrice.map(item => `Размер шин: R${item.level}`).sort().map(item => (
-                            <div key={item}
-                                 style={{
-                                     display: 'flex',
-                                     alignItems: 'center',
-                                     justifyContent: 'space-between',
-                                     fontSize: '16px'
-                                 }}>
-                                <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                                <InputField
-                                    id='priceForR'
-                                    value={getPriceByWheelR(item.slice(-2))}
-                                    onChange={(event) => setPriceByWheelRForNewInfo(event, item.slice(-2))}
-                                />
-                            </div>
-                        ))}
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant='secondary' onClick={handleCloseModal}>
-                            Закрыть
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
+
+                <CustomModal show={showModal} handleClose={handleCloseModal} title="Цены для различных диаметров колёс">
+                    {wheelSizeAndPrice.map(item => `Размер шин: R${item.level}`).sort().map(item => (
+                        <div key={item}
+                             style={{
+                                 display: 'flex',
+                                 alignItems: 'center',
+                                 justifyContent: 'space-between',
+                                 fontSize: '16px'
+                             }}>
+                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
+                            <InputField
+                                id='priceForR'
+                                value={getPriceByWheelR(item.slice(-2))}
+                                onChange={(event) => setPriceByWheelRForNewInfo(event, item.slice(-2))}
+                            />
+                        </div>
+                    ))}
+                </CustomModal>
+
                 <Button className='full-width' variant='secondary' onClick={handleOpenModalB}>
                     Посмотреть врем выполнения для различных размеров колёс (доступно только для заказов шиномонтажа)
                 </Button>
-                <Modal show={showModalB}
-                       onHide={handleCloseModalB}
-                       dialogClassName="custom-modal-dialog">
-                    <Modal.Header closeButton>
-                        <Modal.Title>Время для различных диаметров колёс</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        {wheelSizeAndTime.map(item => `Размер шин: R${item.level}`).sort().map(item => (
-                            <div key={item}
-                                 style={{
-                                     display: 'flex',
-                                     alignItems: 'center',
-                                     justifyContent: 'space-between',
-                                     fontSize: '16px'
-                                 }}>
-                                <span className='text' style={{marginRight: '8px'}}>{item}</span>
-                                <InputField
-                                    id='timeForR'
-                                    value={getTimeByWheelR(item.slice(-2))}
-                                    onChange={(event) => setTimeByWheelRForNewInfo(event, item.slice(-2))}
-                                />
-                            </div>
-                        ))}
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant='secondary' onClick={handleCloseModalB}>
-                            Закрыть
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
+
+                <CustomModal show={showModalB} handleClose={handleCloseModalB}
+                             title="Время для различных диаметров колёс">
+                    {wheelSizeAndPrice.map(item => `Размер шин: R${item.level}`).sort().map(item => (
+                        <div key={item}
+                             style={{
+                                 display: 'flex',
+                                 alignItems: 'center',
+                                 justifyContent: 'space-between',
+                                 fontSize: '16px'
+                             }}>
+                            <span className='text' style={{marginRight: '8px'}}>{item}</span>
+                            <InputField
+                                id='timeForR'
+                                value={getTimeByWheelR(item.slice(-2))}
+                                onChange={(event) => setTimeByWheelRForNewInfo(event, item.slice(-2))}
+                            />
+                        </div>
+                    ))}
+                </CustomModal>
+
                 <InputField
                     label='Цена за 1 тип кузова'
                     id='priceFirstType'
-                    value={priceFirstType}
+                    value={prices.firstType}
                     inputStyle={inputStyle}
-                    onChange={setPriceFirstType}
+                    onChange={(value) => setPrices(prev => ({...prev, firstType: value}))}
                 />
                 <InputField
                     label='Цена за 2 тип кузова'
                     id='priceSecondType'
-                    value={priceSecondType}
+                    value={prices.secondType}
                     inputStyle={inputStyle}
-                    onChange={setPriceSecondType}
+                    onChange={(value) => setPrices(prev => ({...prev, secondType: value}))}
                 />
                 <InputField
                     label='Цена за 3 тип кузова'
-                    id='priceFirstType'
-                    value={priceThirdType}
+                    id='priceThirdType'
+                    value={prices.thirdType}
                     inputStyle={inputStyle}
-                    onChange={setPriceThirdType}
+                    onChange={(value) => setPrices(prev => ({...prev, thirdType: value}))}
                 />
                 <InputField
                     label='Примерное время выполнения с 1 типом кузова'
                     id='timeFirstType'
-                    value={timeFirstType}
+                    value={times.firstType}
                     inputStyle={inputStyle}
-                    onChange={setTimeFirstType}
+                    onChange={(value) => setTimes(prev => ({...prev, firstType: value}))}
                 />
                 <InputField
                     label='Примерное время выполнения со 2 типом кузова'
                     id='timeSecondType'
-                    value={timeSecondType}
+                    value={times.secondType}
                     inputStyle={inputStyle}
-                    onChange={setTimeSecondType}
+                    onChange={(value) => setTimes(prev => ({...prev, secondType: value}))}
                 />
                 <InputField
                     label='Примерное время выполнения с 3 типом кузова'
                     id='timeThirdType'
-                    value={timeThirdType}
+                    value={times.thirdType}
                     inputStyle={inputStyle}
-                    onChange={setTimeThirdType}
+                    onChange={(value) => setTimes(prev => ({...prev, thirdType: value}))}
                 />
+
                 {showConfirmation && (
                     <div className='confirmation-container'>
                         <div className='confirmation-message'>
@@ -518,4 +539,4 @@ const ChangeServiceInfoFromEng = observer(() => {
     );
 });
 
-export default ChangeServiceInfoFromEng;
+export default ChangeServiceInfo;

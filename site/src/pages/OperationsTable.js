@@ -2,163 +2,30 @@ import React, {useEffect, useState} from 'react';
 import '../css/MyTable.css';
 import {useSortBy, useTable} from 'react-table';
 import {format, parseISO} from 'date-fns';
-import {getNotMadeOrders, getOrdersBookedInOneDay, getOrdersCreatedInOneDay} from "../http/orderAPI";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
-import {BrowserRouter as Router, useHistory} from "react-router-dom";
-import {DatePicker, Divider, Notification, useToaster} from "rsuite";
+import {BrowserRouter as Router} from "react-router-dom";
+import {DatePicker, Notification, useToaster} from "rsuite";
 import addDays from "date-fns/addDays";
 import {Button} from "react-bootstrap";
 import socketStore from "../store/SocketStore";
 import {observer} from "mobx-react-lite";
-import currentOrderStatusMapFromEng from "../model/map/CurrentOrderStatusMapFromEng";
-
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
+import {getAllOperations, getAllOperationsInOneDay} from "../http/operations";
 
 const columns = [
     {
         Header: 'Айди',
         accessor: 'id',
         sortType: 'alphanumeric',
-        Cell: ({value}) => {
-            const history = useHistory();
-            return <div onClick={() => history.push(`/updateOrderInfo/${value}`)}>{value}</div>;
-        }
     },
     {
-        Header: 'Дата и время начала',
-        accessor: 'startTime',
-        Cell: ({value}) => (
-            value ? (
-                <div>
-                    <span>{format(parseISO(value), 'dd.MM.yyyy ')}</span>
-                    <span style={{fontWeight: 'bold'}}>{format(parseISO(value), 'HH:mm:ss')}</span>
-                </div>
-            ) : 'Неизвестно'
-        ),
-        sortType: (rowA, rowB, columnId) => {
-            const dateA = parseISO(rowA.values[columnId]);
-            const dateB = parseISO(rowB.values[columnId]);
-
-            return dateA.getTime() - dateB.getTime();
-        },
-    },
-    {
-        Header: 'Дата и время конца',
-        accessor: 'endTime',
-        Cell: ({value}) => (
-            value ? (
-                <div>
-                    <span>{format(parseISO(value), 'dd.MM.yyyy ')}</span>
-                    <span style={{fontWeight: 'bold'}}>{format(parseISO(value), 'HH:mm:ss')}</span>
-                </div>
-            ) : 'Неизвестно'
-        ),
-        sortType: (rowA, rowB, columnId) => {
-            const dateA = parseISO(rowA.values[columnId]);
-            const dateB = parseISO(rowB.values[columnId]);
-
-            return dateA.getTime() - dateB.getTime();
-        },
-    },
-    {
-        Header: 'Тип заказа',
-        accessor: 'orderType',
+        Header: 'Номер телефона',
         sortType: 'alphanumeric',
-        Cell: ({value}) => value ? orderTypeMap[value] || value : "Неизвестно"
+        accessor: 'username'
     },
     {
-        Header: 'Клиент',
+        Header: 'Описание',
         sortType: 'alphanumeric',
-        accessor: 'userNumber',
-        Cell: ({value}) => {
-            const history = useHistory();
-            return <div onClick={() => history.push(`/changeUserInfo/${value}`)}>{value}</div>;
-        }
-    },
-    {
-        Header: 'Взятые услуги',
-        sortType: 'alphanumeric',
-        accessor: 'orders',
-        Cell: ({value}) => {
-            return value.join(', ');
-        }
-    },
-    {
-        Header: 'Номер авто', accessor: 'autoNumber',
-        sortType: 'alphanumeric',
-        Cell: ({value}) => {
-            return value === null ? 'Неизвестно' : value;
-        }
-    },
-    {
-        Header: 'Тип кузова', accessor: 'autoType', sortType: 'basic',
-        Cell: ({value}) => {
-            return value === null ? 'Неизвестно' : value;
-        }
-    },
-    {
-        Header: 'Текущие состояние заказа',
-        accessor: 'currentStatus',
-        sortType: 'basic',
-        Cell: ({value}) => {
-            const textColor =
-                value && value.includes('NotDone') ? 'red' :
-                    value && value.includes('cancelled') ? 'blue' :
-                        value && value.includes('Done') ? '#008000' : // темно-зеленый
-                            'brown';
-            return (
-                <div style={{color: textColor}}>
-                    {value ? currentOrderStatusMapFromEng[value] || value : "Неизвестно"}
-                </div>
-            );
-        }
-    },
-    {
-        Header: 'Админ',
-        accessor: 'administrator',
-        sortType: 'basic',
-        Cell: ({value}) => {
-            return value === null ? 'Неизвестно' : value;
-        }
-    },
-    {
-        Header: 'Специалист', accessor: 'specialist',
-        sortType: 'basic',
-        Cell: ({value}) => {
-            return value === null ? 'Неизвестно' : value;
-        }
-    },
-    {
-        Header: 'Бокс',
-        accessor: 'boxNumber',
-        sortType: (rowA, rowB) => {
-            const boxNumberA = rowA.original.boxNumber;
-            const boxNumberB = rowB.original.boxNumber;
-
-            if (boxNumberA === null && boxNumberB === null) {
-                return 0;
-            } else if (boxNumberA === null) {
-                return 1;
-            } else if (boxNumberB === null) {
-                return -1;
-            } else {
-                return boxNumberA - boxNumberB;
-            }
-        },
-        Cell: ({value}) => {
-            return value === null ? 'Неизвестно' : Number(value);
-        },
-    },
-    {
-        Header: 'Комментарии', accessor: 'comments',
-        sortType: 'basic',
-        Cell: ({value}) => {
-            return value === null ? 'Отсутствуют' : value;
-        }
+        accessor: 'description',
     },
     {
         Header: 'Дата создания заказа',
@@ -177,31 +44,18 @@ const columns = [
 
             return dateA.getTime() - dateB.getTime();
         },
-    },
-    {
-        Header: 'Акция',
-        accessor: 'sale',
-        sortType: 'alphanumeric',
-        Cell: ({value}) => value ? value || value : "Неизвестно"
-    },
-    {
-        Header: 'Цена',
-        accessor: 'price',
-        sortType: (rowA, rowB) => rowA.original.price - rowB.original.price,
-        Cell: ({value}) => Number(value),
-    },
+    }
 ];
 
 
-const OrderTable = observer(() => {
+const OperationsTable = observer(() => {
 
-    const [orders, setOrders] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmittingB, setIsSubmittingB] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const start = new Date(selectedDate);
     const end = new Date(selectedDate);
-    const [includeCancelled, setIncludeCancelled] = useState(false);
+
+    const [operations, setOperations] = useState([]);
 
     const [errorResponse, setErrorResponse] = useState();
     const [errorFlag, setErrorFlag] = useState(false);
@@ -210,15 +64,15 @@ const OrderTable = observer(() => {
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
 
-    const getOrderBookedOnThisDay = async (event) => {
+    const getOperationsInDay = async (event) => {
         event.preventDefault();
         if (isSubmitting) {
             return;
         }
         setIsSubmitting(true);
         try {
-            const response = await getOrdersBookedInOneDay(start.toISOString(), end.toISOString(), includeCancelled);
-            setOrders(response);
+            const response = await getAllOperationsInOneDay(start.toISOString(), end.toISOString());
+            setOperations(response)
 
             setSuccessResponse(null)
             setSuccessResponse("Yes all orders")
@@ -241,15 +95,15 @@ const OrderTable = observer(() => {
         }
     };
 
-    const getOrdersCreatedAtThisDay = async (event) => {
+    const getAllUserOperations = async (event) => {
         event.preventDefault();
         if (isSubmitting) {
             return;
         }
         setIsSubmitting(true);
         try {
-            const response = await getOrdersCreatedInOneDay(start.toISOString(), end.toISOString(), includeCancelled);
-            setOrders(response);
+            const response = await getAllOperations(start.toISOString(), end.toISOString());
+            setOperations(response)
 
             setSuccessResponse(null)
             setSuccessResponse("Yes all orders")
@@ -284,7 +138,7 @@ const OrderTable = observer(() => {
             </div>
         </Notification>
     );
-    useHistory();
+
     const newOrderMessage = (
         <Router>
             <Notification
@@ -343,40 +197,10 @@ const OrderTable = observer(() => {
         }
     }, [successResponse]);
 
-    const handleNotMadeOrders = async (event) => {
-        event.preventDefault();
-        if (isSubmitting) {
-            return;
-        }
-        setIsSubmitting(true);
-
-        try {
-            const response = await getNotMadeOrders(includeCancelled);
-            setOrders(response);
-            setSuccessResponse(null)
-            setSuccessResponse("Yes not made orders")
-        } catch (error) {
-            if (error.response) {
-                let messages = [];
-                for (let key in error.response.data) {
-                    messages.push(error.response.data[key]);
-                }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
-                setErrorFlag(flag => !flag);
-
-            } else {
-                setErrorResponse("Системная ошибка. " +
-                    "Еще не выполненные заказы не были получены.")
-                setErrorFlag(flag => !flag)
-            }
-        } finally {
-            setIsSubmitting(false)
-        }
-    };
 
     const {getTableProps, getTableBodyProps, headerGroups, rows, prepareRow} = useTable({
         columns,
-        data: orders,
+        data: operations,
     }, useSortBy);
 
 
@@ -400,7 +224,7 @@ const OrderTable = observer(() => {
             <p style={{
                 fontWeight: 'bold', display: 'flex', fontSize: '17px', justifyContent: 'center',
                 alignItems: 'center', marginTop: '15px'
-            }}>Выберите день заказа</p>
+            }}>Выберите день совершения операции</p>
 
             <DatePicker
                 isoWeek
@@ -436,52 +260,27 @@ const OrderTable = observer(() => {
             />
 
 
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '10px'}}>
-                <input
-                    type="checkbox"
-                    id="includeCancelledCheckbox"
-                    checked={includeCancelled}
-                    onChange={(e) => setIncludeCancelled(e.target.checked)}
-                />
-                <label htmlFor="includeCancelledCheckbox" style={{marginLeft: '10px'}}>
-                    Учитывать ли отменённые заказы?
-                </label>
-            </div>
-
             <Button
                 className='btn-submit'
                 variant='primary'
                 type='submit'
-                onClick={getOrderBookedOnThisDay}
+                onClick={getOperationsInDay}
                 disabled={isSubmitting}
                 style={{marginBottom: '20px', marginTop: '20px'}}>
-                {isSubmitting ? 'Поиск заказов...' : 'Получить все заказы, забронированные на этот день'}
+                {isSubmitting ? 'Поиск заказов...' : 'Получить все операции, созданные в этот день'}
             </Button>
 
             <Button
                 className='btn-submit'
                 variant='primary'
                 type='submit'
-                onClick={getOrdersCreatedAtThisDay}
+                onClick={getAllUserOperations}
                 disabled={isSubmitting}
                 style={{marginBottom: '20px', marginTop: '20px'}}>
-                {isSubmitting ? 'Поиск заказов...' : 'Получить все заказы, созданные в этот день'}
+                {isSubmitting ? 'Поиск заказов...' : 'Получить все операции за всё время'}
             </Button>
 
-            <Button
-                className='btn-submit'
-                variant='primary'
-                type='submit'
-                onClick={handleNotMadeOrders}
-                disabled={isSubmitting}
-                style={{marginBottom: '20px', marginTop: '20px'}}>
-                {isSubmitting ? 'Поиск заказов...' : 'Получить все не сделанные заказы'}
-            </Button>
-
-            <p style={inputStyle}>Вы можете нажать на цифру айди, чтобы перейти на страницу изменения этого заказа</p>
-            <Divider></Divider>
-
-            <table {...getTableProps()} className="MyTable" style={{marginBottom: '100px'}}>
+            <table {...getTableProps()} className="MyTableOperations" style={{marginBottom: '100px'}}>
                 <thead>
                 {headerGroups.map((headerGroup) => (
                     <tr {...headerGroup.getHeaderGroupProps()}>
@@ -513,4 +312,4 @@ const OrderTable = observer(() => {
     );
 });
 
-export default OrderTable;
+export default OperationsTable;

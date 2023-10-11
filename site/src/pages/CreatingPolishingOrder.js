@@ -2,19 +2,15 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
-import {DatePicker, Notification, toaster, useToaster} from 'rsuite';
-
+import {DatePicker, Divider, InputNumber, InputPicker, Notification, useToaster} from 'rsuite';
 import addDays from 'date-fns/addDays';
-import {Divider} from 'rsuite';
-
 import 'rsuite/dist/rsuite.css';
-
-import Modal from "react-bootstrap/Modal";
-
-import {InputNumber, InputPicker} from 'rsuite';
+import '../css/CommonStyles.css';
 import InputField from "../model/InputField";
 import {
-    createPolishingOrder, getAllPolishingServicesWithPriceAndTime,
+    createPolishingOrder,
+    getAllPolishingServicesWithPriceAndTime,
+    getFreeTime,
     getPriceAndFreeTime
 } from "../http/orderAPI";
 import {observer} from "mobx-react-lite";
@@ -23,75 +19,18 @@ import {BrowserRouter as Router, useHistory} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
-import {getAllSales} from "../http/userAPI";
-import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
 import InputFieldNear from "../model/InputFieldNear";
-
-
-const carTypesArray = [
-    '1 тип - седан',
-    '2 тип - кроссовер',
-    '3 тип - джип',
-    'Неизвестно'
-].map(item => ({label: item, value: item}));
-
-const importantInputStyle = {
-    fontWeight: 'bold', display: 'flex', color: 'red',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-
-const orderStatusArray = [
-    "Отменён",
-    "Не оплачен и не сделан",
-    "Оплачен на 5 процентов и не сделан",
-    "Оплачен на 10 процентов и не сделан",
-    "Оплачен на 20 процентов и не сделан",
-    "Оплачен на 30 процентов и не сделан",
-    "Оплачен на 40 процентов и не сделан",
-    "Оплачен на 50 процентов и не сделан",
-    "Оплачен на 60 процентов и не сделан",
-    "Оплачен на 70 процентов и не сделан",
-    "Оплачен на 80 процентов и не сделан",
-    "Оплачен на 90 процентов и не сделан",
-    "Полностью оплачен и не сделан",
-    "Не оплачен, но сделан",
-    "Оплачен на 5 процентов и сделан",
-    "Оплачен на 10 процентов и сделан",
-    "Оплачен на 20 процентов и сделан",
-    "Оплачен на 30 процентов и сделан",
-    "Оплачен на 40 процентов и сделан",
-    "Оплачен на 50 процентов и сделан",
-    "Оплачен на 60 процентов и сделан",
-    "Оплачен на 70 процентов и сделан",
-    "Оплачен на 80 процентов и сделан",
-    "Оплачен на 90 процентов и сделан",
-    "Полностью оплачен и сделан"
-].map(item => ({label: item, value: item}));
-
-const smallInputStyle = {
-    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const styles = {
-    width: 500, display: 'block',
-    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
-};
+import saleStore from "../store/SaleStore.js";
+import {carTypesArray, orderStatusArray} from "../model/Constants";
+import MyCustomModal from "../model/MyCustomModal";
 
 const stylesForInput = {
     width: 190, marginBottom: 10, marginTop: 5
 };
 
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const inputStyleForPriceTime = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center',
-    margin: '5px', padding: '5px', border: '1px solid #ccc',
-    backgroundColor: '#fff', borderRadius: '5px', boxSizing: 'border-box'
+const styles = {
+    width: 500, display: 'block',
+    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
 };
 
 const CreatingPolishingOrder = observer(() => {
@@ -99,12 +38,15 @@ const CreatingPolishingOrder = observer(() => {
     const [submitTime, setSubmitTime] = useState(0);
     const [showModal, setShowModal] = useState(false);
 
-    const [itemsCount, setItemsCount] = useState([{name: '', value: 0}]);
     const [newTime, setNewTime] = useState([{startTime: null, endTime: null, box: 0}]);
 
     const [stringTimeForCurrentDay, setStringTimeForCurrentDay] = useState([]);
 
-    const [selectedItems, setSelectedItems] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([{
+        name: null, priceFirstType: null,
+        priceSecondType: null, priceThirdType: null, timeFirstType: null, timeSecondType: null, timeThirdType: null,
+        number: 0
+    }]);
 
     const [mainOrders, setMainOrders] = useState([{
         name: null, priceFirstType: null,
@@ -115,6 +57,8 @@ const CreatingPolishingOrder = observer(() => {
     const [userContacts, setUserContacts] = useState('');
     const [currentStatus, setCurrentStatus] = useState('');
     const [price, setPrice] = useState(0);
+
+    const [selectedFileId, setSelectedFileId] = useState(null);
 
 
     const [orderTime, setOrderTime] = useState(0);
@@ -148,77 +92,99 @@ const CreatingPolishingOrder = observer(() => {
 
     const [files, setFiles] = useState([]);
 
-    const updateItem = (name, value) => {
-        if (!checkIfItemExists(name)) {
-            const newItemToAdd = {name: name, value: value};
-            setItemsCount(prevItems => [...prevItems, newItemToAdd]);
-        } else {
-            setItemsCount(current =>
-                current.map(item => {
-                    if (item.name === name) {
-                        return {...item, value};
-                    } else {
-                        return item;
-                    }
-                })
+
+    useEffect(() => {
+        if (saleStore?.error) {
+            const errorResponseMessage = (
+                <Notification
+                    type="error"
+                    header="Ошибка!"
+                    closable
+                    style={{border: '1px solid black'}}
+                >
+                    <div style={{width: 320}}>
+                        {saleStore.error}
+                    </div>
+                </Notification>
             );
+
+            toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            saleStore.error = null; // Очищаем ошибку после показа
         }
-    };
+    }, [saleStore?.error]);
+
 
     const filesOptions = files.map(file => ({
-        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+        label: `${file.name} - ${file.description}`,
         value: file.id
     }));
 
-    async function getAllImages() {
-        try {
-            const response = await getAllSales();
-            setFiles(response);
-        } catch (error) {
-            if (error.response) {
-                alert(error.response.data.message)
+
+    useEffect(() => {
+        if (saleStore.discounts.length === 0) {
+            saleStore.loadDiscounts();
+        } else {
+            setFiles(saleStore.discounts);
+        }
+    }, [saleStore.discounts]);
+
+
+    const findSelectedItemByName = (name) => {
+        const item = selectedItems.find(item => item.name === name);
+        return item ? item.number : undefined;
+    }
+
+
+    const updateSelectedItems = (itemName, updatedData) => {
+        setSelectedItems((prevSelectedItems) => {
+            const updatedItems = [...prevSelectedItems];
+            const selectedItem = updatedItems.find((item) => item.name === itemName);
+
+            if (selectedItem) {
+                // Обновляем существующий элемент
+                selectedItem.priceFirstType = updatedData.priceFirstType;
+                selectedItem.priceSecondType = updatedData.priceSecondType;
+                selectedItem.priceThirdType = updatedData.priceThirdType;
+                selectedItem.timeFirstType = updatedData.timeFirstType;
+                selectedItem.timeSecondType = updatedData.timeSecondType;
+                selectedItem.timeThirdType = updatedData.timeThirdType;
+                selectedItem.number = updatedData.number;
+                return updatedItems;
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                // Добавляем новый элемент
+                const newItem = {
+                    name: itemName,
+                    priceFirstType: updatedData.priceFirstType,
+                    priceSecondType: updatedData.priceSecondType,
+                    priceThirdType: updatedData.priceThirdType,
+                    timeFirstType: updatedData.timeFirstType,
+                    timeSecondType: updatedData.timeSecondType,
+                    timeThirdType: updatedData.timeThirdType,
+                    number: updatedData.number
+                };
+                updatedItems.push(newItem);
+                return updatedItems;
             }
-        }
-    }
-
-    useEffect(() => {
-        getAllImages();
-    }, []);
-
-
-    const getItemValueByName = (name) => {
-        const item = itemsCount.find(item => item.name === name);
-        return item ? item.value : undefined;
-    }
-
-    const checkIfItemExists = (name) => {
-        const item = itemsCount.find(item => item.name === name);
-        return !!item;
+        });
     };
 
-    const removeItem = (name) => {
-        setItemsCount(current =>
-            current.filter(item => item.name !== name)
-        );
-    };
-
-    useEffect(() => {
-        const newSelectedItems = [];
-        for (let item of itemsCount) {
-            for (let i = 0; i < item.value; i++) {
-                newSelectedItems.push(item.name);
-            }
-        }
-        setSelectedItems(newSelectedItems);
-    }, [itemsCount]);
 
     const handleItemChange = (item, value) => {
-        updateItem(item, value);
-
         if (value === '0') {
-            removeItem(item);
+            const updatedSelectedItems = selectedItems.filter(selectedItem => selectedItem.name !== item.name);
+            setSelectedItems(updatedSelectedItems);
+        } else {
+            const updatedData = {
+                priceFirstType: item.priceFirstType,
+                priceSecondType: item.priceSecondType,
+                priceThirdType: item.priceThirdType,
+                timeFirstType: item.timeFirstType,
+                timeSecondType: item.timeSecondType,
+                timeThirdType: item.timeThirdType,
+                number: value
+            };
+
+            updateSelectedItems(item.name, updatedData);
         }
     };
 
@@ -238,17 +204,49 @@ const CreatingPolishingOrder = observer(() => {
     useEffect(() => {
         const carCode = mapCarTypeToCode(carTypeMap);
         setCarType(carCode);
-    }, [carTypeMap]);
+
+        const updatedItems = selectedItems.map((item) => {
+            let price = 0;
+            let time = 0;
+
+            switch (carCode) {
+                case 1:
+                    price = item.priceFirstType * item.number;
+                    time = item.timeFirstType * item.number;
+                    break;
+                case 2:
+                    price = item.priceSecondType * item.number;
+                    time = item.timeSecondType * item.number;
+                    break;
+                case 3:
+                    price = item.priceThirdType * item.number;
+                    time = item.timeThirdType * item.number;
+                    break;
+                default:
+                    price = 0;
+                    time = 0;
+                    break;
+            }
+
+            return {
+                price,
+                time,
+            };
+        });
+
+        const totalPrice = updatedItems.reduce((total, item) => total + item.price, 0);
+        const totalOrderTime = updatedItems.reduce((total, item) => total + item.time, 0);
 
 
-    const handleGetPrice = async (e) => {
+        setPrice(totalPrice);
+        setOrderTime(totalOrderTime);
+    }, [carTypeMap, selectedItems]);
+
+
+    const handleGetFreeTime = async (e) => {
         e.preventDefault();
         try {
-            const response = await getPriceAndFreeTime(selectedItems.map(i => i.replace(/ /g, '_')),
-                carType, "polishing", null, start.toISOString(), end.toISOString());
-
-            setPrice(response.price);
-            setOrderTime(response.time);
+            const response = await getFreeTime(orderTime, "polishing", start.toISOString(), end.toISOString());
 
             const newTimeArray = response.availableTime.map(time => ({
                 startTime: time.startTime,
@@ -259,9 +257,17 @@ const CreatingPolishingOrder = observer(() => {
             setNewTime(newTimeArray);
         } catch (error) {
             if (error.response) {
-                alert(error.response.data.message)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));
+                setErrorFlag(flag => !flag);
+
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                setErrorResponse("Системная ошибка, проверьте правильность " +
+                    "введённой информации и попробуйте еще раз")
+                setErrorFlag(flag => !flag)
             }
         }
     }
@@ -296,9 +302,17 @@ const CreatingPolishingOrder = observer(() => {
                 setMainOrders(filteredOrdersMain);
             } catch (error) {
                 if (error.response) {
-                    alert(error.response.data.message)
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join(''));
+                    setErrorFlag(flag => !flag);
+
                 } else {
-                    alert("Системная ошибка, попробуйте позже")
+                    setErrorResponse("Системная ошибка, проверьте правильность " +
+                        "введённой информации и попробуйте еще раз")
+                    setErrorFlag(flag => !flag)
                 }
             }
         }
@@ -332,7 +346,9 @@ const CreatingPolishingOrder = observer(() => {
 
         setBoxNumber(boxNumber);
     };
+
     useHistory();
+
     const newOrderMessage = (
         <Router>
             <Notification
@@ -416,8 +432,13 @@ const CreatingPolishingOrder = observer(() => {
         setIsSubmitting(true);
         setSubmitTime(Date.now());
         try {
+            const namesArray = selectedItems.flatMap((item) => {
+                const {name, number} = item;
+                return Array.from({length: number}, () => name);
+            });
 
-            const response = await createPolishingOrder(selectedItems, userContacts,
+
+            const response = await createPolishingOrder(namesArray.map((name) => name.replace(/ /g, '_')), userContacts,
                 requestStartTime.toISOString(), requestEndTime.toISOString(),
                 administrator, specialist, boxNumber, bonuses, comments,
                 carNumber, carType, price, currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
@@ -439,8 +460,13 @@ const CreatingPolishingOrder = observer(() => {
             setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
-                setErrorResponse(error.response.data.message)
-                setErrorFlag(flag => !flag)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));
+                setErrorFlag(flag => !flag);
+
             } else {
                 setErrorResponse("Системная ошибка, проверьте правильность " +
                     "введённой информации и попробуйте еще раз")
@@ -494,22 +520,18 @@ const CreatingPolishingOrder = observer(() => {
 
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница добавления заказов на полировку</p>
-            <p style={smallInputStyle}>Здесь вы можете сами создать какой-то заказ
+            <p className="input-style-modified">Страница добавления заказов на полировку</p>
+            <p className="small-input-style">Здесь вы можете сами создать какой-то заказ
                 на полировку из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p style={smallInputStyle}> &nbsp;<strong>Обязательно</strong>&nbsp;выберите время заказа, тип кузова,
-                набор услуг и состояние заказа</p>
+            <p className="small-input-style"><strong>Обязательно</strong> выберите все элементы под красным
+                текстом</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                 Выберите услуги
             </Button>
-            <Modal show={showModal}
-                   onHide={handleCloseModal}
-                   dialogClassName="custom-modal-dialog-polishing">
-                <Modal.Header closeButton>
-                    <Modal.Title>Выберите заказы</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
+
+            <MyCustomModal show={showModal} handleClose={handleCloseModal} title="Выберите заказы">
+                <div style={{overflowY: 'auto', maxHeight: '80vh'}}>
                     {mainOrders.map(item => (
                         <div key={item.name} style={{
                             fontSize: '16px', borderBottom: '1px solid lightgray',
@@ -538,63 +560,64 @@ const CreatingPolishingOrder = observer(() => {
                                                  marginTop: '10px'
                                              })}
                                              min={0}
-                                             onChange={value => handleItemChange(item.name, value)}
-                                             value={getItemValueByName(item.name) || 0}/>
+                                             onChange={value => handleItemChange(item, value)}
+                                             value={findSelectedItemByName(item.name) || 0}/>
                             </div>
                         </div>
                     ))}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant='secondary' onClick={handleCloseModal}>
-                        Закрыть
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+                </div>
+            </MyCustomModal>
+
             {selectedItems.length > 0 ? (
-                <div className="selected-items-container text-center">
+                <div className="text-center">
                     <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
-                        Доп услуги:
+                        Выбранные услуги:
                     </Form.Label>
                     <div className="selected-items">
-                        {selectedItems
-                            .filter((item, index) => selectedItems.indexOf(item) === index)
-                            .map((item) => {
-                                if (getItemValueByName(item) > 0) {
-                                    return (
-                                        <span key={item} className="item">
-                  {`${item} (${getItemValueByName(item)})`}
-                </span>
-                                    );
+                        {Object.values(
+                            selectedItems.reduce((acc, item) => {
+                                if (item.number > 0) {
+                                    if (!acc[item.name]) {
+                                        acc[item.name] = {
+                                            name: item.name,
+                                            count: 0,
+                                        };
+                                    }
+                                    acc[item.name].count = item.number;
                                 }
-                                return null;
-                            })}
+                                return acc;
+                            }, {})
+                        ).map((groupedItem) => (
+                            <span key={groupedItem.name} className="item">
+                    {`${groupedItem.name} (${groupedItem.count})`}
+                </span>
+                        ))}
                     </div>
                 </div>
             ) : (
-                <div className='selected-items-container text-center'>
+                <div className='text-center'>
                     <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
-                        Дополнительные услуги:
+                        Выбранные услуги:
                     </Form.Label>
-                    <div className='selected-items-container text-center'>
-                        <span className='empty-list' style={{fontSize: '1.1em'}}>
-                            Нет дополнительных услуг
-                        </span>
+                    <div className='text-center'>
+            <span className='empty-list' style={{fontSize: '1.1em'}}>
+                Нет выбранных услуги
+            </span>
                     </div>
-                </div>
-            )
-            }
+                </div>)}
+
             <Divider></Divider>
-            <p style={importantInputStyle}>Выберите тип кузова</p>
+            <p className="important-input-style">Выберите тип кузова</p>
 
             <InputPicker
                 data={carTypesArray}
                 value={carTypeMap}
-                onChange={setCarTypeMap}
                 style={{...styles, WebkitTextFillColor: "#000000"}}
+                onChange={setCarTypeMap}
                 menuStyle={{fontSize: "17px"}}
             />
 
-            <p style={importantInputStyle}>Выберите день заказа</p>
+            <p className="important-input-style">Выберите день заказа</p>
             <DatePicker
                 isoWeek
                 locale={{
@@ -628,28 +651,28 @@ const CreatingPolishingOrder = observer(() => {
                 }}
             />
 
-            <Button className='full-width' appearance="primary" block onClick={handleGetPrice}>
-                Узнать цену заказа, время и доступное расписание
+            <Button className='full-width' appearance="primary" block onClick={handleGetFreeTime}>
+                Узнать доступное расписание
             </Button>
 
             <div className="label-container">
                 <InputFieldNear
                     label='Цена услуги:'
                     id='price'
+                    className="input-style-for-price-time"
                     value={price}
-                    inputStyle={inputStyleForPriceTime}
                     onChange={setPrice}
                 />
                 <InputFieldNear
                     label='Время выполнения:'
                     id='time'
+                    className="input-style-for-price-time"
                     value={orderTime}
-                    inputStyle={inputStyleForPriceTime}
                     onChange={setOrderTime}
                 />
             </div>
 
-            <p style={importantInputStyle}>Расписание с доступным временем</p>
+            <p className="important-input-style">Расписание с доступным временем</p>
 
             <InputPicker
                 data={stringTimeForCurrentDay.sort(compareTimeIntervals).map((item) => ({label: item, value: item}))}
@@ -676,17 +699,17 @@ const CreatingPolishingOrder = observer(() => {
                     label='Номер телефона клиента:'
                     id='name'
                     value={userContacts}
-                    inputStyle={inputStyle}
+                    className="input-style"
                     onChange={setUserContacts}
                 />
                 <InputField
                     label='Номер автомобиля:'
                     id='carNumber'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={carNumber}
                     onChange={setCarNumber}
                 />
-                <p style={importantInputStyle}>Выберите состояние заказа</p>
+                <p className="important-input-style">Выберите состояние заказа</p>
 
                 <InputPicker
                     data={orderStatusArray}
@@ -696,24 +719,23 @@ const CreatingPolishingOrder = observer(() => {
                     menuStyle={{fontSize: "17px"}}
                 />
 
-                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+                <p className="input-style">Выберите акцию, если необходимо</p>
 
                 <InputPicker
                     data={filesOptions}
-                    inputStyle={inputStyle}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
-                    value={selectedSaleDescription}
+                    value={selectedFileId} // здесь изменено на selectedFileId
                     menuStyle={{fontSize: "17px"}}
-
                     onChange={(selectedValue) => {
                         const selectedFile = files.find(file => file.id === selectedValue);
+                        setSelectedFileId(selectedValue); // сохраняем ID файла
                         setSelectedSaleDescription(selectedFile.description);
                     }}
                 />
 
                 <InputField
                     label='Специалист:'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
@@ -721,21 +743,21 @@ const CreatingPolishingOrder = observer(() => {
                 <InputField
                     label='Администратор:'
                     id='administrator'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={administrator}
                     onChange={setAdministrator}
                 />
                 <InputField
                     label='Количество использованных бонусов:'
                     id='bonuses'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={bonuses}
                     onChange={setBonuses}
                 />
                 <InputField
                     label='Комментарии:'
                     id='comments'
-                    inputStyle={inputStyle}
+                    className="input-style"
                     value={comments}
                     onChange={setComments}
                 />

@@ -1,16 +1,19 @@
 import '../css/CreatingOrder.css';
+import '../css/CommonStyles.css';
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import InputField from "../model/InputField";
-import {BrowserRouter as Router, Link, useHistory, useParams} from "react-router-dom";
+import {BrowserRouter as Router, useParams} from "react-router-dom";
 import {
     deleteOrderById,
-    getAllPolishingServicesWithPriceAndTime, getAllTireServicesWithPriceAndTime, getAllWashingServicesWithPriceAndTime,
+    getAllPolishingServicesWithPriceAndTime,
+    getAllTireServicesWithPriceAndTime,
+    getAllWashingServicesWithPriceAndTime,
     getOrderInfo,
     updateOrderInfo
 } from "../http/orderAPI";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
-import {DatePicker, Divider, InputNumber, InputPicker, Notification, toaster, useToaster} from "rsuite";
+import {DatePicker, Divider, InputNumber, InputPicker, Notification, useToaster} from "rsuite";
 import addDays from "date-fns/addDays";
 import Modal from "react-bootstrap/Modal";
 import russianToEnglishMap from "../model/map/OrderTypeMapFromRussian";
@@ -21,87 +24,24 @@ import currentOrderStatusMapFromEng from "../model/map/CurrentOrderStatusMapFrom
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
 import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
 import {getAllSales} from "../http/userAPI";
+import {carTypesArray, orderStatusArray, serviceTypesArray} from "../model/Constants";
+import MyCustomModal from "../model/MyCustomModal";
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
 
-const smallInputStyle = {
-    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const serviceTypesArray = [
-    "Мойка",
-    "Полировка",
-    "Шиномонтаж",
-    "Мойка с сайта",
-    "Шиномонтаж с сайта",
-    "Полировка с сайта",
-    "Шиномонтаж с приложения",
-    "Полировка с приложения",
-    "Мойка ELITE",
-    "Мойка VIP",
-    "Мойка Комфорт",
-    "Мойка Стандарт",
-    "Мойка Эконом",
-    "Мойка неизвестная",
-    "Неизвестно",
-].map(item => ({label: item, value: item}));
-
-
-const orderStatusArray = [
-    "Отменён",
-    "Не оплачен и не сделан",
-    "Оплачен на 5 процентов и не сделан",
-    "Оплачен на 10 процентов и не сделан",
-    "Оплачен на 20 процентов и не сделан",
-    "Оплачен на 30 процентов и не сделан",
-    "Оплачен на 40 процентов и не сделан",
-    "Оплачен на 50 процентов и не сделан",
-    "Оплачен на 60 процентов и не сделан",
-    "Оплачен на 70 процентов и не сделан",
-    "Оплачен на 80 процентов и не сделан",
-    "Оплачен на 90 процентов и не сделан",
-    "Полностью оплачен и не сделан",
-    "Не оплачен, но сделан",
-    "Оплачен на 5 процентов и сделан",
-    "Оплачен на 10 процентов и сделан",
-    "Оплачен на 20 процентов и сделан",
-    "Оплачен на 30 процентов и сделан",
-    "Оплачен на 40 процентов и сделан",
-    "Оплачен на 50 процентов и сделан",
-    "Оплачен на 60 процентов и сделан",
-    "Оплачен на 70 процентов и сделан",
-    "Оплачен на 80 процентов и сделан",
-    "Оплачен на 90 процентов и сделан",
-    "Полностью оплачен и сделан"
-].map(item => ({label: item, value: item}));
+const stylesForInput = {
+    width: 190, marginBottom: 10, marginTop: 5
+};
 
 const styles = {
     width: 500, display: 'block',
     marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
 };
 
-
-const carTypesArray = [
-    '1 тип - седан',
-    '2 тип - кроссовер',
-    '3 тип - джип',
-    'Неизвестно'
-].map(item => ({label: item, value: item}));
-[
-    'Заказ был выполнен',
-    'Заказ не был выполнен',
-].map(item => ({label: item, value: item}));
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-const stylesForInput = {
-    width: 190, marginBottom: 10, marginTop: 5
-};
-
 const UpdateOrderInfo = observer(() => {
     const [showModal, setShowModal] = useState(false);
+    const [showModalB, setShowModalB] = useState(false);
 
     const handleOpenModal = () => {
         if (orderType) {
@@ -121,8 +61,6 @@ const UpdateOrderInfo = observer(() => {
             }
         }
     }
-
-    const [showModalB, setShowModalB] = useState(false);
 
 
     const [userPhone, setUserPhone] = useState('');
@@ -162,8 +100,6 @@ const UpdateOrderInfo = observer(() => {
     const [boxNumber, setBoxNumber] = useState(0);
     const [bonuses, setBonuses] = useState(0);
     const [comments, setComments] = useState('');
-    const [executed, setExecuted] = useState('');
-    const [executedToCode, setExecutedToCode] = useState(false);
 
     const [selectedSaleId, setSelectedSaleId] = useState(null);
 
@@ -176,8 +112,8 @@ const UpdateOrderInfo = observer(() => {
 
     const [successResponse, setSuccessResponse] = useState();
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitTime, setSubmitTime] = useState(0);
+    const [isSubmitting] = useState(false);
+    const [submitTime] = useState(0);
     const [showConfirmation, setShowConfirmation] = useState(false);
 
     const [showConfirmationUpdateOrder, setShowConfirmationUpdateOrder] = useState(false);
@@ -254,6 +190,7 @@ const UpdateOrderInfo = observer(() => {
                     return map;
                 }, new Map());
 
+
                 countMap.forEach((count, item) => {
                     handleItemChange(item, count.toString());
                 })
@@ -291,16 +228,20 @@ const UpdateOrderInfo = observer(() => {
         } catch
             (error) {
             if (error.response) {
-                setErrorResponse(error.response.data.message)
-                setErrorFlag(flag => !flag)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorFlag(flag => !flag);
+
             } else {
-                setErrorResponse("Системная ошибка, проверьте правильность " +
-                    "введённой информации и попробуйте еще раз")
+                setErrorResponse("Системная ошибка с получением информации о заказе. " +
+                    "Попробуйте еще раз")
                 setErrorFlag(flag => !flag)
             }
         }
     }
-
 
 
     useEffect(() => {
@@ -341,7 +282,6 @@ const UpdateOrderInfo = observer(() => {
     };
 
 
-
     async function getAllPolishingServices() {
         try {
             const response = await getAllPolishingServicesWithPriceAndTime();
@@ -352,9 +292,17 @@ const UpdateOrderInfo = observer(() => {
             setMainOrders(filteredOrdersMain);
         } catch (error) {
             if (error.response) {
-                alert(error.response.data.message)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorFlag(flag => !flag);
+
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                setErrorResponse("Системная ошибка с получением услуг полировки. " +
+                    "Перезагрузите страницу и попробуйте еще раз.")
+                setErrorFlag(flag => !flag)
             }
         }
     }
@@ -387,9 +335,17 @@ const UpdateOrderInfo = observer(() => {
             setMainTireOrders(filteredOrdersMain)
         } catch (error) {
             if (error.response) {
-                alert(error.response.data.message)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorFlag(flag => !flag);
+
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                setErrorResponse("Системная ошибка. " +
+                    "Попробуйте еще раз")
+                setErrorFlag(flag => !flag)
             }
         }
     }
@@ -426,8 +382,10 @@ const UpdateOrderInfo = observer(() => {
                         <>
                             <div style={{textAlign: 'left'}}>
                                 <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
-                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
-                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время начала
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
                             </div>
                         </>
                     )}
@@ -503,7 +461,7 @@ const UpdateOrderInfo = observer(() => {
                     russianToEnglishMap[orderType], price, wheelR,
                     startTime.toISOString(), administrator,
                     autoNumber, carType, specialist, boxNumber, bonuses,
-                    comments, executedToCode, endTime.toISOString(),
+                    comments, endTime.toISOString(),
                     selectedItems.map(i => i.replace(/ /g, '_')),
                     currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
                 setSuccessResponse(data.message)
@@ -547,8 +505,8 @@ const UpdateOrderInfo = observer(() => {
                     setErrorResponse(error.response.data.message)
                     setErrorFlag(flag => !flag)
                 } else {
-                    setErrorResponse("Системная ошибка, проверьте правильность " +
-                        "введённой информации и попробуйте еще раз")
+                    setErrorResponse("Системная ошибка с удалением заказа. " +
+                        "Проверьте правильность введённой информации и попробуйте еще раз")
                     setErrorFlag(flag => !flag)
                 }
             }
@@ -582,14 +540,14 @@ const UpdateOrderInfo = observer(() => {
 
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница изменения информации о заказе</p>
-            <p style={smallInputStyle}>Вы можете открыть таблицу с заказами за какой-то день,
+            <p className="input-style-modified">Страница изменения информации о заказе</p>
+            <p className="small-input-style">Вы можете открыть таблицу с заказами за какой-то день,
                 выбрать там заказ, информацию о котором хотите обновить, а он сам окажется здесь</p>
 
 
             <Form onSubmit={sendUpdateRequest}>
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Айди заказа'
                     id='orderId'
                     value={orderId}
@@ -646,110 +604,89 @@ const UpdateOrderInfo = observer(() => {
                     </Modal.Footer>
                 </Modal>
 
-
-                <Modal show={showModalB}
-                       onHide={handleCloseModal}
-                       dialogClassName="custom-modal-dialog-tire">
-                    <Modal.Header closeButton>
-                        <Modal.Title>Выберите заказы</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
+                <MyCustomModal show={showModalB} handleClose={handleCloseModal} title="Выберите заказы">
+                    <div style={{overflowY: 'auto', maxHeight: '80vh'}}>
                         {mainTireOrders.map((item, index) => (
                             <div key={index} style={{
                                 fontSize: '16px',
                                 borderBottom: '1px solid lightgray',
                                 paddingBottom: '10px',
-                                paddingTop: '10px'
+                                paddingTop: '10px',
                             }}>
                                 <div style={{textAlign: 'center'}}>
                                     <span>{item.name}</span>
                                 </div>
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: 'auto 1fr',
                                     gap: '10px',
-                                    alignItems: 'center'
+                                    alignItems: 'center',
+                                    gridTemplateColumns: 'auto 1fr',
+                                    gridTemplateRows: 'repeat(3, auto)', // Добавляем три строки для Размеров, Времени и Цен
                                 }}>
                                     <div style={{color: 'green'}}>Размеры:</div>
-                                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '10px'}}>
-                                        <div>R13</div>
-                                        <div>R14</div>
-                                        <div>R15</div>
-                                        <div>R16</div>
-                                        <div>R17</div>
-                                        <div>R18</div>
-                                        <div>R19</div>
-                                        <div>R20</div>
-                                        <div>R21</div>
-                                        <div>R22</div>
-                                    </div>
-                                </div>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'auto 1fr',
-                                    gap: '10px',
-                                    alignItems: 'center'
-                                }}>
-                                    <div style={{color: 'blue', gridColumn: '1'}}>Время:</div>
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: 'repeat(10, 1fr)',
                                         gap: '10px',
-                                        gridColumn: '2'
+                                        gridTemplateColumns: 'repeat(10, 1fr)',
+                                        overflowX: 'auto'
                                     }}>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_13}</div>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_14}</div>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.time_r_15}</div>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0'}{item.time_r_16}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_17}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_18}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_19}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.time_r_20}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.time_r_21}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.time_r_22}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R13</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R14</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R15</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R16</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R17</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R18</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R19</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R20</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R21</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>R22</div>
                                     </div>
-                                </div>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'auto 1fr',
-                                    gap: '10px',
-                                    alignItems: 'center'
-                                }}>
-                                    <div style={{color: 'red', gridColumn: '1'}}>Цены:</div>
+                                    <div style={{color: 'blue'}}>Время:</div>
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: 'repeat(10, 1fr)',
                                         gap: '10px',
-                                        gridColumn: '2'
+                                        gridTemplateColumns: 'repeat(10, 1fr)',
+                                        overflowX: 'auto'
                                     }}>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_13}</div>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_14}</div>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_15}</div>
-                                        <div
-                                            style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{item.price_r_16}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_17}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_18}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_19}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0\u00A0'}{item.price_r_20}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.price_r_21}</div>
-                                        <div style={{whiteSpace: 'pre'}}>{'\u00A0\u00A0'}{item.price_r_22}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_13}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_14}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_15}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_16}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_17}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_18}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_19}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_20}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_21}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_22}</div>
+                                    </div>
+                                    <div style={{color: 'red'}}>Цены:</div>
+                                    <div style={{
+                                        display: 'grid',
+                                        gap: '10px',
+                                        gridTemplateColumns: 'repeat(10, 1fr)',
+                                        overflowX: 'auto'
+                                    }}>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_13}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_14}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_15}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_16}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_17}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_18}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_19}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_20}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_21}</div>
+                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_22}</div>
                                     </div>
                                 </div>
                                 <div style={{
                                     display: 'flex',
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
+                                    marginTop: '10px',
                                 }}>
                                     <InputNumber
                                         size="sm"
                                         placeholder="sm"
-                                        style={Object.assign({}, stylesForInput, {margin: '0 auto', marginTop: '10px'})}
+                                        style={Object.assign({}, stylesForInput, {margin: '0 auto'})}
                                         min={0}
                                         onChange={value => handleItemChange(item.name, value)}
                                         value={getItemValueByName(item.name) || 0}
@@ -757,13 +694,8 @@ const UpdateOrderInfo = observer(() => {
                                 </div>
                             </div>
                         ))}
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant='secondary' onClick={handleCloseModal}>
-                            Закрыть
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
+                    </div>
+                </MyCustomModal>
 
                 {selectedItems.length > 0 ? (
                     <div className="selected-items-container text-center">
@@ -800,7 +732,7 @@ const UpdateOrderInfo = observer(() => {
                 <Divider></Divider>
 
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Телефон пользователя'
                     id='userPhone'
                     value={userPhone}
@@ -821,41 +753,32 @@ const UpdateOrderInfo = observer(() => {
                 />
 
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Цена за заказ (целое число)'
                     id='price'
                     value={price}
                     onChange={setPrice}
                 />
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Администратор'
                     id='administrator'
                     value={administrator}
                     onChange={setAdministrator}
                 />
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Специалист'
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
                 />
-                <p style={inputStyle}>Выберите тип кузова</p>
+                <p className="input-style">Выберите тип кузова</p>
                 <InputPicker
                     data={carTypesArray}
                     value={carTypeMap}
                     onChange={setCarTypeMap}
-
-                    style={{
-                        width: 500,
-                        display: 'block',
-                        marginBottom: 10,
-                        marginLeft: 'auto',
-                        marginRight: 'auto',
-                        marginTop: 10,
-                        WebkitTextFillColor: "#000000"
-                    }}
+                    style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
                 />
                 <p style={{
@@ -878,20 +801,20 @@ const UpdateOrderInfo = observer(() => {
                     menuStyle={{fontSize: "17px"}}
                 />
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Номер автомобиля'
                     id='autoNumber'
                     value={autoNumber}
                     onChange={setAutoNumber}
                 />
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Номер бокса'
                     id='boxNumber'
                     value={boxNumber}
                     onChange={setBoxNumber}
                 />
-                <p style={inputStyle}>Время начала заказа</p>
+                <p className="input-style">Время начала заказа</p>
 
                 <DatePicker
                     isoWeek
@@ -926,7 +849,7 @@ const UpdateOrderInfo = observer(() => {
                     }}
                 />
 
-                <p style={inputStyle}>Время конца заказа</p>
+                <p className="input-style">Время конца заказа</p>
                 <DatePicker
                     isoWeek
                     locale={{
@@ -960,7 +883,7 @@ const UpdateOrderInfo = observer(() => {
                     }}
                 />
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Комментарии клиента'
                     id='comments'
                     value={comments}
@@ -979,7 +902,7 @@ const UpdateOrderInfo = observer(() => {
                     menuStyle={{fontSize: "17px"}}
                 />
 
-                <p style={inputStyle}>Выберите акцию, если необходимо</p>
+                <p className="input-style">Выберите акцию, если необходимо</p>
 
                 <InputPicker
                     data={filesOptions}
@@ -991,7 +914,7 @@ const UpdateOrderInfo = observer(() => {
 
 
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Использованные клиентом бонусы'
                     id='bonuses'
                     value={bonuses}
@@ -1000,7 +923,7 @@ const UpdateOrderInfo = observer(() => {
                 {showConfirmationUpdateOrder && (
                     <div className='confirmation-container'>
                         <div className='confirmation-message'>
-                            <p style={inputStyle}>Вы уверены, что хотите изменить информацию об этом заказе?</p>
+                            <p className="input-style">Вы уверены, что хотите изменить информацию об этом заказе?</p>
                             <p>Это изменит информацию об этом заказе ВО ВСЕЙ базе данных для ВСЕХ</p>
                             <p>Пожалуйста, предварительно спросите у клиента разрешение на изменение его заказа</p>
                             <div className='confirmation-buttons'>
@@ -1027,7 +950,7 @@ const UpdateOrderInfo = observer(() => {
             {showConfirmation && (
                 <div className='confirmation-container'>
                     <div className='confirmation-message'>
-                        <p style={inputStyle}>Вы уверены, что хотите удалить заказ?</p>
+                        <p className="input-style">Вы уверены, что хотите удалить заказ?</p>
                         <p>Это изменит информацию об этом заказе ВО ВСЕЙ базе данных для ВСЕХ</p>
                         <p>Пожалуйста, предварительно спросите у клиента разрешение на удаление его заказа</p>
                         <div className='confirmation-buttons'>

@@ -2,35 +2,23 @@ import '../css/CreatingOrder.css';
 import {findUserByPhone, getAllUsers, updateUserInfo} from "../http/userAPI";
 import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
-import '../css/CreatingOrder.css';
 import InputField from "../model/InputField";
-import {InputPicker, Notification, TagPicker, toaster, useToaster} from "rsuite";
-import {BrowserRouter as Router, Link, useHistory, useParams} from "react-router-dom";
+import {InputPicker, Notification, TagPicker, useToaster} from "rsuite";
+import {BrowserRouter as Router, useHistory, useParams} from "react-router-dom";
 import {observer} from "mobx-react-lite";
 import socketStore from "../store/SocketStore";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
+import rolesFromEnglishMap from "../model/map/RolesFromEnglishMap";
+import rolesFromRussianMap from "../model/map/RolesFromRussianMap";
+import {rolesArray} from "../model/Constants";
 
-
-const rolesArray = [
-    'Обычный пользователь',
-    'Администратор',
-    'Модератор',
-].map(item => ({label: item, value: item}));
-
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
-
-const smallInputStyle = {
-    display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
 
 const styles = {
     width: 500, display: 'block',
     marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
 };
+
 
 const ChangeUserInfo = observer(() => {
     const [showConfirmation, setShowConfirmation] = useState(false);
@@ -68,8 +56,10 @@ const ChangeUserInfo = observer(() => {
                         <>
                             <div style={{textAlign: 'left'}}>
                                 <p>Тип заказа: {orderTypeMap[JSON.parse(socketStore.message).orderType]}</p>
-                                <p>Время начала заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
-                                <p>Время конца заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время начала
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).startTime), 'dd.MM.yyyy HH:mm:ss')}</p>
+                                <p>Время конца
+                                    заказа: {format(parseISO(JSON.parse(socketStore.message).endTime), 'dd.MM.yyyy HH:mm:ss')}</p>
                             </div>
                         </>
                     )}
@@ -137,8 +127,12 @@ const ChangeUserInfo = observer(() => {
                 }
             } catch (error) {
                 if (error.response) {
-                    setErrorResponse(error.response.data.message)
-                    setErrorFlag(flag => !flag)
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join(''));
+                    setErrorFlag(flag => !flag);
                 } else {
                     setErrorResponse("Системная ошибка, проверьте правильность " +
                         "введённой информации и попробуйте еще раз")
@@ -159,7 +153,8 @@ const ChangeUserInfo = observer(() => {
                     setAdminNote(response.adminNotes || '');
                     setUserNote(response.userNotes || '');
                     setEmail(response.email || '')
-                    const roles = response.roles.map(role => rolesToRussianMap(role.name)) || [];
+                    const roles = response.roles.map(role => rolesToRussianMap(role)) || [];
+
                     setSelectedRoles(roles);
 
                     setGetUsers(true)
@@ -192,34 +187,28 @@ const ChangeUserInfo = observer(() => {
         setEnSelectedRoles(arrayOfRoles);
     };
 
-
     const rolesToEnglishMap = (item) => {
-        if (item === 'Модератор') {
-            return 'ROLE_MODERATOR';
-        } else if (item === 'Админ') {
-            return 'ROLE_ADMIN';
-        } else if (item === 'Администратор') {
-            return 'ROLE_ADMINISTRATOR'
-        } else if (item === 'Обычный пользователь') {
-            return 'ROLE_USER';
+        const translatedRole = rolesFromRussianMap[item];
+
+        if (translatedRole) {
+            return translatedRole;
         } else {
-            return 'ERROR'
+            setErrorResponse("Незивестная роль");
+            setErrorFlag(flag => !flag);
         }
-    };
+    }
+
 
     const rolesToRussianMap = (item) => {
-        if (item === 'ROLE_MODERATOR') {
-            return 'Модератор';
-        } else if (item === 'ROLE_ADMIN') {
-            return 'Админ';
-        } else if (item === 'ROLE_ADMINISTRATOR') {
-            return 'Администратор'
-        } else if (item === 'ROLE_USER') {
-            return 'Обычный пользователь';
+        const translatedRole = rolesFromEnglishMap[item];
+
+        if (translatedRole) {
+            return translatedRole;
         } else {
-            return 'ERROR'
+            setErrorResponse("Незивестная роль");
+            setErrorFlag(flag => !flag);
         }
-    };
+    }
 
     const handleTagRemoved = (item) => {
         setSelectedRoles(prevSelectedRoles =>
@@ -255,32 +244,25 @@ const ChangeUserInfo = observer(() => {
 
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница изменения информации о человеке в базе данных</p>
-            <p style={{...inputStyle, marginTop: '15px'}}>Человек с ролью администратор и выше может пользоваться
+            <p className="input-style-modified">Страница изменения информации о человеке в базе данных</p>
+            <p className="input-style-modified">Человек с ролью администратор, модератора, специалиста и директора может
+                пользоваться
                 сайтом</p>
 
-            <p style={{...inputStyle, marginTop: '15px'}}>Выберите роли пользователя</p>
-            <p style={smallInputStyle}>От этого зависит, смогут ли они пользоваться приложением и сайтом</p>
+            <p className="input-style-modified">Выберите роли пользователя</p>
             <TagPicker
                 data={rolesArray}
                 block
                 value={selectedRoles}
                 onChange={value => setSelectedRoles(value)}
                 onClose={handleTagRemoved}
-                style={{
-                    width: '500px',
-                    display: 'block',
-                    marginBottom: 10,
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    marginTop: 10,
-                    WebkitTextFillColor: "#000000"
-                }}
+                className="styles"
+                style={{WebkitTextFillColor: "#000000"}}
             />
 
             <Form onSubmit={handleSubmit}>
 
-                <p style={{...inputStyle, marginTop: '15px'}}>Все пользователи приложения</p>
+                <p className="input-style-modified">Все пользователи приложения</p>
                 <InputPicker
                     data={usersArray.map(item => ({label: item, value: item}))}
                     value={username}
@@ -290,7 +272,7 @@ const ChangeUserInfo = observer(() => {
                 />
 
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Имя и фамилия'
                     id='fullName'
                     value={fullName}
@@ -298,7 +280,6 @@ const ChangeUserInfo = observer(() => {
                 />
 
                 <InputField
-                    inputStyle={inputStyle}
                     label='Почта'
                     id='email'
                     value={email}
@@ -306,14 +287,14 @@ const ChangeUserInfo = observer(() => {
                 />
 
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Ваша заметка о человеке '
                     id='adminNote'
                     value={adminNote}
                     onChange={setAdminNote}
                 />
                 <InputField
-                    inputStyle={inputStyle}
+                    className="input-style"
                     label='Комментарии самого пользователя (возможно, более точная информация о машине и тп)'
                     id='userNote'
                     value={userNote}
@@ -322,7 +303,7 @@ const ChangeUserInfo = observer(() => {
                 {showConfirmation && (
                     <div className='confirmation-container'>
                         <div className='confirmation-message'>
-                            <p style={inputStyle}>Вы уверены, что хотите отправить запрос?</p>
+                            <p className="input-style">Вы уверены, что хотите отправить запрос?</p>
                             <p>Это изменит информацию об этом человеке ВО ВСЕЙ базе данных для ВСЕХ</p>
                             <div className='confirmation-buttons'>
                                 <Button onClick={() => setShowConfirmation(false)}

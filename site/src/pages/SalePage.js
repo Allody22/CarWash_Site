@@ -1,16 +1,14 @@
 import React, {useEffect, useState} from 'react';
 import {Button} from 'react-bootstrap';
-import {
-    InputPicker,
-    Notification, Uploader, useToaster,
-} from 'rsuite';
+import {Notification, useToaster,} from 'rsuite';
 import '../css/CreatingOrder.css';
 import '../css/NewStyles.css';
+import '../css/CommonStyles.css';
 import 'rsuite/dist/rsuite.css';
 
 import {observer} from "mobx-react-lite";
 import socketStore from "../store/SocketStore";
-import {BrowserRouter as Router, useHistory} from "react-router-dom";
+import {BrowserRouter as Router} from "react-router-dom";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 import {getAllSales, uploadImage} from "../http/userAPI";
@@ -18,11 +16,8 @@ import StatusFileMap from "../model/map/StatusFileMapFromEnd";
 import Modal from "react-bootstrap/Modal";
 import InputField from "../model/InputField";
 import StatusFileMapFromRus from "../model/map/StatusFileMapFromRus";
-
-const inputStyle = {
-    fontWeight: 'bold', display: 'flex',
-    fontSize: '17px', justifyContent: 'center', alignItems: 'center', marginTop: '5px'
-}
+import saleStore from "../store/SaleStore";
+import {saleDay} from "../model/Constants";
 
 const inputFileStyle = {
     display: 'block',          // делает input блочным элементом
@@ -45,25 +40,15 @@ const buttonStyle = {
     // дополнительные стили по вашему усмотрению...
 };
 
-const modalTextStyle = {
-    fontWeight: 'bold',
-    fontSize: '18px',
-    marginBottom: '5px', // уменьшил отступ
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    maxWidth: '100%'
-};
-
 const modalText = {
     marginBottom: '5px',
     fontWeight: 'bold',
     fontSize: '18px',
     maxWidth: '100%',
     display: 'flex',
-    justifyContent: 'center', // заменено на camelCase
-    alignItems: 'center',     // заменено на camelCase
-    textAlign: 'center'      // заменено на camelCase
+    justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center'
 };
 
 const confirmationStyle = {
@@ -77,7 +62,6 @@ const confirmationStyle = {
     alignItems: 'center',     // заменено на camelCase
     textAlign: 'center'      // заменено на camelCase
 };
-
 
 
 const statusStyle = {
@@ -121,21 +105,8 @@ const imageStyle = {
 };
 
 
-const saleDay = [
-    'Акция на понедельник',
-    'Акция на вторник',
-    'Акция на среду',
-    'Акция на четверг',
-    'Акция на пятницу',
-    'Акция на субботу',
-    'Акция на воскресенье'
-].map(item => ({label: item, value: item}));
-
-
-
 const SalePage = observer(() => {
     const toaster = useToaster();
-    const history = useHistory()
 
     const [errorResponse, setErrorResponse] = useState();
     const [errorFlag, setErrorFlag] = useState(false);
@@ -149,8 +120,27 @@ const SalePage = observer(() => {
     const [uploadedFile, setUploadedFile] = useState(null);
 
     const [description, setDescription] = useState("");
+
     const [status, setStatus] = useState("");
 
+    const [files, setFiles] = useState([]);
+
+    async function getAllImages() {
+        try {
+            const response = await getAllSales();
+            setFiles(response);
+        } catch (error) {
+            if (error.response) {
+                alert(error.response.data.message)
+            } else {
+                alert("Системная ошибка, попробуйте позже")
+            }
+        }
+    }
+
+    useEffect(() => {
+        getAllImages();
+    }, []);
 
     const newOrderMessage = (
         <Router>
@@ -186,49 +176,69 @@ const SalePage = observer(() => {
     }, [socketStore.message]);
 
 
-    const [files, setFiles] = useState([]);
+    useEffect(() => {
+        if (saleStore?.error) {
+            const errorResponseMessage = (
+                <Notification
+                    type="error"
+                    header="Ошибка!"
+                    closable
+                    style={{border: '1px solid black'}}
+                >
+                    <div style={{width: 320}}>
+                        {saleStore.error}
+                    </div>
+                </Notification>
+            );
 
-    async function getAllImages() {
-        try {
-            const response = await getAllSales();
-            setFiles(response);
-            console.log(response)
-        } catch (error) {
-            if (error.response) {
-                alert(error.response.data.message)
-            } else {
-                alert("Системная ошибка, попробуйте позже")
-            }
+            toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            saleStore.error = null; // Очищаем ошибку после показа
         }
-    }
+    }, [saleStore?.error]);
+
 
     useEffect(() => {
-        getAllImages();
-    }, []);
+        if (saleStore.discounts.length === 0) {
+            saleStore.loadDiscounts();
+        } else {
+            setFiles(saleStore.discounts);
+        }
+    }, [saleStore.discounts]);
+
+
+    const handleRefreshDiscounts = () => {
+        saleStore.refreshDiscounts();
+    };
+
 
     const handleUpload = async () => {
         if (uploadedFile && description && status) {
             try {
                 const response = await uploadImage(uploadedFile, description, StatusFileMapFromRus[status]);
                 setSuccessResponse(response.message)
-                setDescription(null)
-                setStatus(null)
+                setDescription("")
+                setStatus("")
                 setUploadedFile(null)
-                await getAllImages()
-            } catch
-                (error) {
+
+                handleRefreshDiscounts()
+                await getAllImages();
+            } catch (error) {
                 if (error.response) {
-                    setErrorResponse(error.response.data.message)
-                    setErrorFlag(flag => !flag)
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join(''));
+                    setErrorFlag(flag => !flag);
+
                 } else {
-                    setErrorResponse("Системная ошибка, проверьте правильность " +
-                        "введённой информации и попробуйте еще раз")
+                    setErrorResponse("Системная ошибка с загрузкой файлов. " +
+                        "Перезагрузите страницу и попроуйте еще раз")
                     setErrorFlag(flag => !flag)
                 }
             }
         }
     };
-
 
     const errorResponseMessage = (
         <Notification
@@ -270,14 +280,19 @@ const SalePage = observer(() => {
     }, [successResponse]);
 
     const handleOpenModal = (file) => {
-        setDescription(file.description)
-        setStatus(file.status)
+        if (file) {
+            setDescription(file.description);
+            setStatus(StatusFileMap[file.status])
+        } else {
+            setDescription("");
+            setStatus("");
+        }
         setShowModal(true);
     };
 
-    const handleCloseModal = (file) => {
-        setDescription(null)
-        setStatus(null)
+
+    const handleCloseModal = () => {
+        setDescription("")
         setUploadedFile(null)
         setShowModal(false);
     };
@@ -301,7 +316,13 @@ const SalePage = observer(() => {
 
     return (
         <>
-            <p style={{...inputStyle, marginTop: '15px'}}>Страница акций</p>
+            <p className="input-style-modified">Страница акций</p>
+            <p className="small-input-style">Если где-то появляется надпись "Неизвестно",
+                то перезайдите на эту страницу.</p>
+            <p className="small-input-style">Вы можете добавить акцию на какой-то определённый день недели
+                или обновить текущую.</p>
+            <p className="small-input-style"><strong>Пожалуйста</strong>, внимательно выбирайте картинки
+                для отправки: очень большие картинки пользователям будет тяжело смотреть с телефона</p>
             <div style={containerStyle}>
                 {files.map(file => {
                     const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -320,8 +341,9 @@ const SalePage = observer(() => {
                             </p>
 
                             {fileExtension === 'png' || fileExtension === 'jpg' || fileExtension === 'jpeg' ? (
-                                <img src={file.url} alt={file.description} style={imageStyle}/>
+                                <img src={file.url} alt={file.description} style={imageStyle} loading="lazy"/>
                             ) : null}
+
                             <div style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                 marginTop: '10px', marginBottom: '20px'
@@ -329,7 +351,7 @@ const SalePage = observer(() => {
                                 <Button
                                     variant={"outline-dark"}
                                     className="mt-4 p-2 flex-grow-1"
-                                    onClick={()  => handleOpenModal(file)}
+                                    onClick={() => handleOpenModal(file)}
                                     style={{marginTop: '10px'}}
                                 >
                                     Обновить данную услугу
@@ -345,16 +367,21 @@ const SalePage = observer(() => {
                         <Modal.Title>Информация о новой версии файла</Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
+
                         <select
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
-                            style={{   width: 500,
+                            style={{
+                                width: 500,
                                 display: 'block',
                                 marginBottom: 10,
                                 marginLeft: 'auto',
                                 marginRight: 'auto',
                                 marginTop: 10,
-                                WebkitTextFillColor: "#000000" }}>
+                                WebkitTextFillColor: "#000000"
+                            }}
+                        >
+                            <option value="" disabled selected>ВЫБРАТЬ ДЕНЬ</option>
                             {saleDay.map((item) => (
                                 <option key={item.value} value={item.value}>
                                     {item.label}
@@ -369,9 +396,10 @@ const SalePage = observer(() => {
                             value={description}
                             onChange={setDescription}
                         />
-                        <input type="file" onChange={handleFileChange} style={inputFileStyle} />
 
-                        {uploadedFile ? <img src={URL.createObjectURL(uploadedFile)} alt="Uploaded" style={{ width: '100%', margin: '20px 0' }} /> : null}
+                        <input type="file" onChange={handleFileChange} style={inputFileStyle}/>
+                        {uploadedFile ? <img src={URL.createObjectURL(uploadedFile)} alt="Uploaded"
+                                             style={{width: '100%', margin: '20px 0'}}/> : null}
 
                     </Modal.Body>
                     <Modal.Footer>
@@ -391,7 +419,8 @@ const SalePage = observer(() => {
                         <p style={confirmationStyle}>Проверьте еще раз информацию</p>
                         <p style={modalText}>{StatusFileMap[status] || status || "Неизвестно"}</p>
                         <p style={modalText}>Описание: {description || "Неизвестно"}</p>
-                        {uploadedFile ? <img src={URL.createObjectURL(uploadedFile)} alt="Uploaded" style={{ width: '100%', margin: '20px 0' }} /> : null}
+                        {uploadedFile ? <img src={URL.createObjectURL(uploadedFile)} alt="Uploaded"
+                                             style={{width: '100%', margin: '20px 0'}}/> : null}
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant='secondary' onClick={handleCloseConfirmationModal}>
