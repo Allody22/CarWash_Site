@@ -6,7 +6,7 @@ import InputField from "../model/InputField";
 import {BrowserRouter as Router, useParams} from "react-router-dom";
 import {
     deleteOrderById,
-    getAllPolishingServicesWithPriceAndTime,
+    getAllPolishingServicesWithPriceAndTime, getAllServicesWithPriceAndTime,
     getAllTireServicesWithPriceAndTime,
     getAllWashingServicesWithPriceAndTime,
     getOrderInfo,
@@ -26,6 +26,8 @@ import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
 import {getAllSales} from "../http/userAPI";
 import {carTypesArray, orderStatusArray, serviceTypesArray} from "../model/Constants";
 import MyCustomModal from "../model/MyCustomModal";
+import saleStore from "../store/SaleStore";
+import ModalContent from "../model/ModalContent"
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
@@ -41,27 +43,8 @@ const styles = {
 
 const UpdateOrderInfo = observer(() => {
     const [showModal, setShowModal] = useState(false);
+
     const [showModalB, setShowModalB] = useState(false);
-
-    const handleOpenModal = () => {
-        if (orderType) {
-            if (russianToEnglishMap[orderType].includes("tire")) {
-                setShowModalB(true);
-            } else {
-                setShowModal(true)
-            }
-        }
-    }
-    const handleCloseModal = () => {
-        if (orderType) {
-            if (russianToEnglishMap[orderType].includes("tire")) {
-                setShowModalB(false);
-            } else {
-                setShowModal(false)
-            }
-        }
-    }
-
 
     const [userPhone, setUserPhone] = useState('');
     const [wheelR, setWheelR] = useState('');
@@ -79,21 +62,13 @@ const UpdateOrderInfo = observer(() => {
     const [carType, setCarType] = useState(0);
     const toaster = useToaster();
 
-    const [itemsCount, setItemsCount] = useState([{name: '', value: 0}]);
-
-    const [selectedItems, setSelectedItems] = useState([]);
-
-    const [mainOrders, setMainOrders] = useState([{
-        name: null, priceFirstType: null,
-        priceSecondType: null, priceThirdType: null, timeFirstType: null, timeSecondType: null, timeThirdType: null
-    }]);
-
-    const [mainTireOrders, setMainTireOrders] = useState([{
-        name: null, price_r_13: null,
+    const [selectedItems, setSelectedItems] = useState([{
+        name: null, priceFirstType: null, priceSecondType: null, priceThirdType: null,
+        timeFirstType: null, timeSecondType: null, timeThirdType: null, price_r_13: null,
         price_r_14: null, price_r_15: null, price_r_16: null, price_r_17: null, price_r_18: null,
-        price_r_19: null, price_r_20: null, price_r_21: null, price_r_22: null,
+        price_r_19: null, price_r_20: null, price_r_21: null, price_r_22: null, time_r_13: null,
         time_r_14: null, time_r_15: null, time_r_16: null, time_r_17: null, time_r_18: null,
-        time_r_19: null, time_r_20: null, time_r_21: null, time_r_22: null,
+        time_r_19: null, time_r_20: null, time_r_21: null, time_r_22: null, type: null, number: null
     }]);
 
 
@@ -101,11 +76,11 @@ const UpdateOrderInfo = observer(() => {
     const [bonuses, setBonuses] = useState(0);
     const [comments, setComments] = useState('');
 
-    const [selectedSaleId, setSelectedSaleId] = useState(null);
-
+    const [selectedSale, setSelectedSale] = useState(null);
 
     const [selectedSaleDescription, setSelectedSaleDescription] = useState('');
     const [files, setFiles] = useState([]);
+    const [allServices, setAllServices] = useState([]);
 
     const [errorResponse, setErrorResponse] = useState();
     const [errorFlag, setErrorFlag] = useState(false);
@@ -122,89 +97,187 @@ const UpdateOrderInfo = observer(() => {
     const {id} = useParams();
     const [orderId, setOrderId] = useState('')
 
-    const filesOptions = files.map(file => ({
-        label: `${fileNameFromEngMap[file.name]} - ${file.description}`,
+    //Работа с акциями
+    useEffect(() => {
+        if (saleStore?.error) {
+            const errorResponseMessage = (
+                <Notification
+                    type="error"
+                    header="Ошибка!"
+                    closable
+                    style={{border: '1px solid black'}}
+                >
+                    <div style={{width: 320}}>
+                        {saleStore.error}
+                    </div>
+                </Notification>
+            );
+
+            toaster.push(errorResponseMessage, {placement: "bottomEnd"});
+            saleStore.error = null; // Очищаем ошибку после показа
+        }
+    }, [saleStore?.error]);
+
+
+    const saleOptions = files.map(file => ({
+        label: `${file.name} - ${file.description}`,
         value: file.id
     }));
 
-    const updateItem = (name, value) => {
-        if (!checkIfItemExists(name)) {
-            const newItemToAdd = {name: name, value: value};
-            setItemsCount(prevItems => [...prevItems, newItemToAdd]);
-        } else {
-            setItemsCount(current =>
-                current.map(item => {
-                    if (item.name === name) {
-                        return {...item, value};
-                    } else {
-                        return item;
-                    }
-                })
-            );
-        }
-    };
-
-    const getItemValueByName = (name) => {
-        const item = itemsCount.find(item => item.name === name);
-        return item ? item.value : undefined;
-    }
-
-    const checkIfItemExists = (name) => {
-        const item = itemsCount.find(item => item.name === name);
-        return !!item;
-    };
-
-    const removeItem = (name) => {
-        setItemsCount(current =>
-            current.filter(item => item.name !== name)
-        );
-    };
 
     useEffect(() => {
-        const newSelectedItems = [];
-        for (let item of itemsCount) {
-            for (let i = 0; i < item.value; i++) {
-                newSelectedItems.push(item.name);
-            }
+        if (saleStore.discounts.length === 0) {
+            saleStore.loadDiscounts();
+        } else {
+            setFiles(saleStore.discounts);
         }
-        setSelectedItems(newSelectedItems);
-    }, [itemsCount]);
+    }, [saleStore.discounts]);
+    //Работа с акциями
 
-    const handleItemChange = (item, value) => {
-        updateItem(item, value);
+    const updateSelectedItems = (itemName, updatedData) => {
+        setSelectedItems((prevSelectedItems) => {
+            const updatedItems = [...prevSelectedItems];
+            const selectedItem = updatedItems.find((item) => item.name === itemName);
+            if (selectedItem) {
+                // Обновляем существующий элемент
+                selectedItem.priceFirstType = updatedData.priceFirstType;
+                selectedItem.priceSecondType = updatedData.priceSecondType;
+                selectedItem.priceThirdType = updatedData.priceThirdType;
+                selectedItem.timeFirstType = updatedData.timeFirstType;
+                selectedItem.timeSecondType = updatedData.timeSecondType;
+                selectedItem.timeThirdType = updatedData.timeThirdType;
+                selectedItem.price_r_13 = updatedData.price_r_13;
+                selectedItem.price_r_14 = updatedData.price_r_14;
+                selectedItem.price_r_15 = updatedData.price_r_15;
+                selectedItem.price_r_16 = updatedData.price_r_16;
+                selectedItem.price_r_17 = updatedData.price_r_17;
+                selectedItem.price_r_18 = updatedData.price_r_18;
+                selectedItem.price_r_19 = updatedData.price_r_19;
+                selectedItem.price_r_20 = updatedData.price_r_20;
+                selectedItem.price_r_21 = updatedData.price_r_21;
+                selectedItem.price_r_22 = updatedData.price_r_22;
+                selectedItem.time_r_13 = updatedData.time_r_13;
+                selectedItem.time_r_14 = updatedData.time_r_14;
+                selectedItem.time_r_15 = updatedData.time_r_15;
+                selectedItem.time_r_16 = updatedData.time_r_16;
+                selectedItem.time_r_17 = updatedData.time_r_17;
+                selectedItem.time_r_18 = updatedData.time_r_18;
+                selectedItem.time_r_19 = updatedData.time_r_19;
+                selectedItem.time_r_20 = updatedData.time_r_20;
+                selectedItem.time_r_21 = updatedData.time_r_21;
+                selectedItem.time_r_22 = updatedData.time_r_22;
+                selectedItem.number = updatedData.number;
+                return updatedItems;
+            } else {
+                // Добавляем новый элемент
+                const newItem = {
+                    name: itemName,
+                    priceFirstType : updatedData.priceFirstType,
+                    priceSecondType : updatedData.priceSecondType,
+                    priceThirdType : updatedData.priceThirdType,
+                    timeFirstType : updatedData.timeFirstType,
+                    timeSecondType : updatedData.timeSecondType,
+                    timeThirdType : updatedData.timeThirdType,
+                    price_r_13: updatedData.price_r_13,
+                    price_r_14: updatedData.price_r_14,
+                    price_r_15: updatedData.price_r_15,
+                    price_r_16: updatedData.price_r_16,
+                    price_r_17: updatedData.price_r_17,
+                    price_r_18: updatedData.price_r_18,
+                    price_r_19: updatedData.price_r_19,
+                    price_r_20: updatedData.price_r_20,
+                    price_r_21: updatedData.price_r_21,
+                    price_r_22: updatedData.price_r_22,
+                    time_r_13: updatedData.time_r_13,
+                    time_r_14: updatedData.time_r_14,
+                    time_r_15: updatedData.time_r_15,
+                    time_r_16: updatedData.time_r_16,
+                    time_r_17: updatedData.time_r_17,
+                    time_r_18: updatedData.time_r_18,
+                    time_r_19: updatedData.time_r_19,
+                    time_r_20: updatedData.time_r_20,
+                    time_r_21: updatedData.time_r_21,
+                    time_r_22: updatedData.time_r_22,
+                    number: updatedData.number
+                };
+                updatedItems.push(newItem);
+                return updatedItems;
+            }
+        });
+    };
+
+
+    const handleItemChange = (itemName, value) => {
+        const item = getItemValueByNameInAllServices(itemName);
+        if (!item) {
+            return;
+        }
         if (value === '0') {
-            removeItem(item);
+            const updatedSelectedItems = selectedItems.filter(selectedItem => selectedItem.name !== itemName);
+            setSelectedItems(updatedSelectedItems);
+        } else {
+            const updatedData = {
+                priceFirstType: item.priceFirstType,
+                priceSecondType: item.priceSecondType,
+                priceThirdTypeType: item.priceThirdType,
+                timeFirstType: item.timeFirstType,
+                timeSecondType: item.timeSecondType,
+                timeThirdTypeType: item.timeThirdType,
+                price_r_13: item.price_r_13,
+                price_r_14: item.price_r_14,
+                price_r_15: item.price_r_15,
+                price_r_16: item.price_r_16,
+                price_r_17: item.price_r_17,
+                price_r_18: item.price_r_18,
+                price_r_19: item.price_r_19,
+                price_r_20: item.price_r_20,
+                price_r_21: item.price_r_21,
+                price_r_22: item.price_r_22,
+                time_r_13: item.time_r_13,
+                time_r_14: item.time_r_14,
+                time_r_15: item.time_r_15,
+                time_r_16: item.time_r_16,
+                time_r_17: item.time_r_17,
+                time_r_18: item.time_r_18,
+                time_r_19: item.time_r_19,
+                time_r_20: item.time_r_20,
+                time_r_21: item.time_r_21,
+                time_r_22: item.time_r_22,
+                number: value
+            };
+
+            updateSelectedItems(item.name, updatedData);
         }
     };
 
+    const getItemValueByNameInAllServices = (name) => {
+        const item = allServices.find(item => item.name === name);
+        return item || undefined;
+    }
+
+    const getValueByNameInSelectedItems = (name) => {
+        const item = selectedItems.find(item => item.name === name);
+        return item ? item.number : undefined;
+    }
+
     async function getThisOrderInfo(currentId) {
+        await getAllServices();
         try {
             if (!isNaN(currentId) && String(currentId).trim() !== '') {
-                setItemsCount([])
                 const response = await getOrderInfo(parseInt(currentId));
-                const responseSales = await getAllSales();
-                setFiles(responseSales);
 
                 const countMap = response.orders.map(i => i.replace(/_/g, ' ')).reduce((map, order) => {
                     map.set(order, (map.get(order) || 0) + 1);
                     return map;
                 }, new Map());
 
-
                 countMap.forEach((count, item) => {
                     handleItemChange(item, count.toString());
                 })
 
-
                 const responseCarType = mapCarTypeCodeToString(response.autoType)
                 setCarTypeMap(responseCarType)
                 setCurrentStatus(currentOrderStatusMapFromEng[response.currentStatus])
-
-                setSelectedSaleDescription(response.sale);
-                const selectedFile = files.find(file => file.description === response.sale);
-                if (selectedFile) {
-                    setSelectedSaleId(selectedFile.id);
-                }
 
 
                 setOrderId(response.id)
@@ -281,86 +354,17 @@ const UpdateOrderInfo = observer(() => {
         }
     };
 
+    async function getAllServices() {
+        const allServicesResponse = await getAllServicesWithPriceAndTime();
+        const filteredServices = allServicesResponse.map(item => ({
+            ...item,
+            name: item.name.replace(/_/g, ' '),
+        }));
 
-    async function getAllPolishingServices() {
-        try {
-            const response = await getAllPolishingServicesWithPriceAndTime();
-            const filteredOrdersMain = response.map(item => ({
-                ...item,
-                name: item.name.replace(/_/g, ' ')
-            }));
-            setMainOrders(filteredOrdersMain);
-        } catch (error) {
-            if (error.response) {
-                let messages = [];
-                for (let key in error.response.data) {
-                    messages.push(error.response.data[key]);
-                }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
-                setErrorFlag(flag => !flag);
-
-            } else {
-                setErrorResponse("Системная ошибка с получением услуг полировки. " +
-                    "Перезагрузите страницу и попробуйте еще раз.")
-                setErrorFlag(flag => !flag)
-            }
-        }
+        setAllServices([...filteredServices]);
+        return true;
     }
 
-
-    async function getAllWashingServices() {
-        try {
-            const response = await getAllWashingServicesWithPriceAndTime();
-            const ordersMain = response.map(item => ({
-                ...item,
-                name: item.name.replace(/_/g, ' ')
-            }));
-            setMainOrders(ordersMain);
-        } catch (error) {
-            if (error.response) {
-                alert(error.response.data.message)
-            } else {
-                alert("Системная ошибка, попробуйте позже")
-            }
-        }
-    }
-
-    async function getAllTireServices() {
-        try {
-            const response = await getAllTireServicesWithPriceAndTime();
-            const filteredOrdersMain = response.map(item => ({
-                ...item,
-                name: item.name.replace(/_/g, ' ')
-            }));
-            setMainTireOrders(filteredOrdersMain)
-        } catch (error) {
-            if (error.response) {
-                let messages = [];
-                for (let key in error.response.data) {
-                    messages.push(error.response.data[key]);
-                }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
-                setErrorFlag(flag => !flag);
-
-            } else {
-                setErrorResponse("Системная ошибка. " +
-                    "Попробуйте еще раз")
-                setErrorFlag(flag => !flag)
-            }
-        }
-    }
-
-    useEffect(() => {
-        if (orderType) {
-            if (russianToEnglishMap[orderType].includes("wash")) {
-                getAllWashingServices();
-            } else if (russianToEnglishMap[orderType].includes("polish")) {
-                getAllPolishingServices();
-            } else if (russianToEnglishMap[orderType].includes("tire")) {
-                getAllTireServices();
-            }
-        }
-    }, [orderType]);
 
     useEffect(() => {
         const carCode = mapCarTypeToCode(carTypeMap);
@@ -457,14 +461,28 @@ const UpdateOrderInfo = observer(() => {
         e.preventDefault();
         if (showConfirmationUpdateOrder && isNumberString(orderId)) {
             try {
-                const data = await updateOrderInfo(orderId, userPhone,
-                    russianToEnglishMap[orderType], price, wheelR,
-                    startTime.toISOString(), administrator,
-                    autoNumber, carType, specialist, boxNumber, bonuses,
-                    comments, endTime.toISOString(),
-                    selectedItems.map(i => i.replace(/ /g, '_')),
-                    currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
-                setSuccessResponse(data.message)
+                const prepareSelectedItems = (selectedItems) => {
+                    return selectedItems
+                        .filter(item => item && item.name !== null)
+                        .reduce((acc, item) => {
+                            const names = Array(parseInt(item.number, 10)).fill(item.name.replace(/ /g, '_'));
+                            return acc.concat(names);
+                        }, []);
+                };
+
+
+                const filteredAndFormattedItems = prepareSelectedItems(selectedItems);
+
+                console.log(filteredAndFormattedItems)
+                const data = await updateOrderInfo(
+                    orderId, userPhone, russianToEnglishMap[orderType], price, wheelR,
+                    startTime.toISOString(), administrator, autoNumber, carType, specialist,
+                    boxNumber, bonuses, comments, endTime.toISOString(), filteredAndFormattedItems,
+                    currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription
+                );
+
+                setSuccessResponse(data.message);
+
             } catch
                 (error) {
                 if (error.response) {
@@ -516,12 +534,6 @@ const UpdateOrderInfo = observer(() => {
         }
     };
 
-    const handleFileChange = (selectedValue) => {
-        const selectedFile = files.find(file => file.id === selectedValue);
-        setSelectedSaleDescription(selectedFile.description);
-        setSelectedSaleId(selectedFile.id);
-    }
-
     const predefinedBottomRanges = [
         {
             label: 'Вчера',
@@ -536,6 +548,20 @@ const UpdateOrderInfo = observer(() => {
             value: addDays(new Date(), 1),
         }
     ];
+
+    const handleOpenModal = () => {
+        if (orderType.includes("Шино")) {
+            setShowModalB(true);
+        } else {
+            setShowModal(true);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowModalB(false);
+        setShowModal(false);
+    };
+
 
 
     return (
@@ -556,46 +582,19 @@ const UpdateOrderInfo = observer(() => {
                 <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
                     Выберите услуги для поставленного типа заказа
                 </Button>
-                <Modal show={showModal}
-                       onHide={handleCloseModal}
-                       dialogClassName="custom-modal-dialog-polishing">
+                <Modal show={showModal} onHide={handleCloseModal} dialogClassName="custom-modal-dialog-polishing">
                     <Modal.Header closeButton>
                         <Modal.Title>Выберите заказы</Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
-                        {mainOrders.map(item => (
-                            <div key={item.name} style={{
-                                fontSize: '16px', borderBottom: '1px solid lightgray',
-                                paddingBottom: '10px', paddingTop: '10px'
-                            }}>
-                                <div style={{textAlign: 'center'}}>
-                                    <span>{item.name}</span>
-                                </div>
-                                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '7px'}}>
-                                    <div>
-                                        <span style={{color: "red"}}>Цены: </span>
-                                        <span>{`${item.priceFirstType} / ${item.priceSecondType} / ${item.priceThirdType}`}</span>
-                                    </div>
-                                    <div style={{marginLeft: 'auto'}}>
-                                        <span style={{color: "blue"}}>Время: </span>
-                                        <span>{`${item.timeFirstType} / ${item.timeSecondType} / ${item.timeThirdType}`}</span>
-                                    </div>
-                                </div>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center'
-                                }}>
-                                    <InputNumber size="sm" placeholder="sm"
-                                                 style={Object.assign({}, stylesForInput, {
-                                                     margin: '0 auto',
-                                                     marginTop: '10px'
-                                                 })}
-                                                 min={0}
-                                                 onChange={value => handleItemChange(item.name, value)}
-                                                 value={getItemValueByName(item.name) || 0}/>
-                                </div>
-                            </div>
-                        ))}
+                        {orderType.includes("Мойка") && allServices.length > 0 &&
+                            <ModalContent filterType="Wash" handleItemChange={handleItemChange}
+                                          getValueByNameInSelectedItems={getValueByNameInSelectedItems} allServices={allServices} />
+                        }
+                        {orderType.includes("Полировка") && allServices.length > 0 &&
+                            <ModalContent filterType="Polish" handleItemChange={handleItemChange}
+                                          getValueByNameInSelectedItems={getValueByNameInSelectedItems} allServices={allServices} />
+                        }
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant='secondary' onClick={handleCloseModal}>
@@ -606,7 +605,8 @@ const UpdateOrderInfo = observer(() => {
 
                 <MyCustomModal show={showModalB} handleClose={handleCloseModal} title="Выберите заказы">
                     <div style={{overflowY: 'auto', maxHeight: '80vh'}}>
-                        {mainTireOrders.map((item, index) => (
+                        {orderType.includes("Шиномон") && allServices.length > 0
+                            && allServices.filter(item => item.type.includes("Tire")).map((item, index) => (
                             <div key={index} style={{
                                 fontSize: '16px',
                                 borderBottom: '1px solid lightgray',
@@ -684,12 +684,11 @@ const UpdateOrderInfo = observer(() => {
                                     marginTop: '10px',
                                 }}>
                                     <InputNumber
-                                        size="sm"
-                                        placeholder="sm"
+                                        size="sm" placeholder="sm"
                                         style={Object.assign({}, stylesForInput, {margin: '0 auto'})}
                                         min={0}
                                         onChange={value => handleItemChange(item.name, value)}
-                                        value={getItemValueByName(item.name) || 0}
+                                        value={getValueByNameInSelectedItems(item.name) || 0}
                                     />
                                 </div>
                             </div>
@@ -698,34 +697,40 @@ const UpdateOrderInfo = observer(() => {
                 </MyCustomModal>
 
                 {selectedItems.length > 0 ? (
-                    <div className="selected-items-container text-center">
+                    <div className="text-center">
                         <Form.Label style={{fontWeight: "bold", fontSize: "1.2em"}}>
                             Выбранные услуги:
                         </Form.Label>
                         <div className="selected-items">
-                            {selectedItems
-                                .filter((item, index) => selectedItems.indexOf(item) === index)
-                                .map((item) => {
-                                    if (getItemValueByName(item) > 0) {
-                                        return (
-                                            <span key={item} className="item">
-                  {`${item} (${getItemValueByName(item) || 0})`}
-                </span>
-                                        );
+                            {Object.values(
+                                selectedItems.reduce((acc, item) => {
+                                    if (item.number > 0) {
+                                        if (!acc[item.name]) {
+                                            acc[item.name] = {
+                                                name: item.name,
+                                                count: 0,
+                                            };
+                                        }
+                                        acc[item.name].count = item.number;
                                     }
-                                    return null;
-                                })}
+                                    return acc;
+                                }, {})
+                            ).map((groupedItem) => (
+                                <span key={groupedItem.name} className="item">
+                    {`${groupedItem.name} (${groupedItem.count})`}
+                </span>
+                            ))}
                         </div>
                     </div>
                 ) : (
-                    <div className='selected-items-container text-center'>
+                    <div className='text-center'>
                         <Form.Label style={{fontWeight: 'bold', fontSize: '1.2em'}}>
                             Выбранные услуги:
                         </Form.Label>
-                        <div className='selected-items-container text-center'>
-                        <span className='empty-list' style={{fontSize: '1.1em'}}>
-                            Нет выбранных услуг
-                        </span>
+                        <div className='text-center'>
+            <span className='empty-list' style={{fontSize: '1.1em'}}>
+                Нет выбранных услуги
+            </span>
                         </div>
                     </div>)}
 
@@ -905,13 +910,16 @@ const UpdateOrderInfo = observer(() => {
                 <p className="input-style">Выберите акцию, если необходимо</p>
 
                 <InputPicker
-                    data={filesOptions}
+                    data={saleOptions}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
-                    value={selectedSaleId}
+                    value={selectedSale}
                     menuStyle={{fontSize: "17px"}}
-                    onChange={handleFileChange}
+                    onChange={(selectedValue) => {
+                        const newSelectedSale = files.find(file => file.id === selectedValue);
+                        setSelectedSale(selectedValue); // сохраняем ID файла
+                        setSelectedSaleDescription(newSelectedSale.description);
+                    }}
                 />
-
 
                 <InputField
                     className="input-style"

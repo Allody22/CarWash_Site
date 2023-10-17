@@ -23,6 +23,11 @@ export const getAllWashingServicesWithPriceAndTime = async () => {
     return await response.data;
 };
 
+export const getAllServicesWithPriceAndTime = async () => {
+    const response = await $authHost.get('/api/orders/management/getAllServicesWithPriceAndTime_v1');
+    return await response.data;
+};
+
 export const getAllPolishingServicesWithPriceAndTime = async () => {
     const response = await $authHost.get('/api/orders/management/getAllPolishingServicesWithPriceAndTime_v1');
     return await response.data;

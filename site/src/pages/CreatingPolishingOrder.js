@@ -58,7 +58,7 @@ const CreatingPolishingOrder = observer(() => {
     const [currentStatus, setCurrentStatus] = useState('');
     const [price, setPrice] = useState(0);
 
-    const [selectedFileId, setSelectedFileId] = useState(null);
+    const [selectedSale, setSelectedSale] = useState(null);
 
 
     const [orderTime, setOrderTime] = useState(0);
@@ -114,7 +114,7 @@ const CreatingPolishingOrder = observer(() => {
     }, [saleStore?.error]);
 
 
-    const filesOptions = files.map(file => ({
+    const saleOptions = files.map(file => ({
         label: `${file.name} - ${file.description}`,
         value: file.id
     }));
@@ -722,13 +722,13 @@ const CreatingPolishingOrder = observer(() => {
                 <p className="input-style">Выберите акцию, если необходимо</p>
 
                 <InputPicker
-                    data={filesOptions}
+                    data={saleOptions}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
-                    value={selectedFileId} // здесь изменено на selectedFileId
+                    value={selectedSale}
                     menuStyle={{fontSize: "17px"}}
                     onChange={(selectedValue) => {
                         const selectedFile = files.find(file => file.id === selectedValue);
-                        setSelectedFileId(selectedValue); // сохраняем ID файла
+                        setSelectedSale(selectedValue); // сохраняем ID файла
                         setSelectedSaleDescription(selectedFile.description);
                     }}
                 />
