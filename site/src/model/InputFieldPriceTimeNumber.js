@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 
-const InputField = ({label, id, value, onChange, className, style, maxLength = 200}) => {
+
+const InputFieldPriceTimeNumber = ({label, id, value, onChange, className, style, maxLength = 10}) => {
     const [hasValue, setHasValue] = useState(value !== "");
     const [isExceeded, setIsExceeded] = useState(false);
 
@@ -10,6 +11,17 @@ const InputField = ({label, id, value, onChange, className, style, maxLength = 2
         onChange(e.target.value);
     };
 
+    const handleNumericChange = (e) => {
+        const regex = /^[0-9]+$/; // Этот регулярное выражение соответствует только целым положительным числам
+        if (regex.test(e.target.value) || e.target.value === '') {
+            handleChange(e);
+        } else {
+            // Если введенное значение не соответствует требованиям, оставляем значение неизменным
+            e.preventDefault();
+        }
+    };
+
+
     const handleFocus = () => {
         setHasValue(true);
     };
@@ -18,14 +30,12 @@ const InputField = ({label, id, value, onChange, className, style, maxLength = 2
         setHasValue(value !== "");
     };
 
-
     const inputStyle = {
         fontSize: '17px',
         border: isExceeded ? '1px solid red' : '1px solid #000',  // Измените цвет границы здесь
         padding: '5px 10px',
         ...style,
     };
-
 
     return (
         <div className={`input-container ${className}`} style={style}>
@@ -37,15 +47,15 @@ const InputField = ({label, id, value, onChange, className, style, maxLength = 2
                 className={`form-control input-field ${hasValue ? 'has-value' : ''}`}
                 id={id}
                 value={value}
-                placeholder={hasValue ? '' : 'Введите текст'}
-                onChange={handleChange}
+                placeholder={hasValue ? '' : 'Введите число'}
+                onChange={handleNumericChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
-                style={inputStyle}
                 maxLength={maxLength}
+                style={inputStyle}
             />
         </div>
     );
 };
 
-export default InputField;
+export default InputFieldPriceTimeNumber;

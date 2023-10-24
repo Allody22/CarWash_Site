@@ -10,7 +10,7 @@ import addDays from 'date-fns/addDays';
 import 'rsuite/dist/rsuite.css';
 
 import InputField from "../model/InputField";
-import {createTireOrder, getAllTireServicesWithPriceAndTime, getFreeTime, getPriceAndFreeTime} from "../http/orderAPI";
+import {createTireOrder, getAllTireServicesWithPriceAndTime, getFreeTime} from "../http/orderAPI";
 import socketStore from "../store/SocketStore";
 import {observer} from "mobx-react-lite";
 import {BrowserRouter as Router, useHistory} from "react-router-dom";
@@ -21,6 +21,7 @@ import InputFieldNear from "../model/InputFieldNear";
 import saleStore from "../store/SaleStore";
 import {orderStatusArray} from "../model/Constants";
 import MyCustomModal from "../model/MyCustomModal";
+import InputFieldPriceTimeNumber from "../model/InputFieldPriceTimeNumber";
 
 const stylesForInput = {
     width: 190, marginBottom: 10, marginTop: 5
@@ -40,7 +41,6 @@ const CreatingTireOrder = observer(() => {
     const [showModal, setShowModal] = useState(false);
     const [selectedFileId, setSelectedFileId] = useState(null);
 
-    const [itemsCount, setItemsCount] = useState([{name: '', value: 0}]);
     const [newTime, setNewTime] = useState([{startTime: null, endTime: null, box: 0}]);
 
     const [stringTimeForCurrentDay, setStringTimeForCurrentDay] = useState([]);
@@ -209,18 +209,20 @@ const CreatingTireOrder = observer(() => {
             }));
 
             setNewTime(newTimeArray);
+            const sentence = `Свободное время успешно получено!`;
+            setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
                 let messages = [];
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));
+                setErrorResponse(messages.join('\n'));
                 setErrorFlag(flag => !flag);
 
             } else {
-                setErrorResponse("Системная ошибка с получением цены. " +
-                    "Попробуйте перезагрузить страницу")
+                setErrorResponse("Системная ошибка, проверьте правильность " +
+                    "введённой информации и попробуйте еще раз")
                 setErrorFlag(flag => !flag)
             }
         }
@@ -446,7 +448,7 @@ const CreatingTireOrder = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 <p>{successResponse}</p>
             </div>
         </Notification>
@@ -459,7 +461,7 @@ const CreatingTireOrder = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 {errorResponse}
             </div>
         </Notification>
@@ -480,6 +482,12 @@ const CreatingTireOrder = observer(() => {
 
     const handleCreateOrder = async (e) => {
         e.preventDefault();
+        if (!requestStartTime || !requestEndTime) {
+            setErrorResponse("Обязательно укажите время начала и время конца заказа")
+            setErrorFlag(flag => !flag)
+            return;
+        }
+
         if (isSubmitting) {
             return;
         }
@@ -518,12 +526,12 @@ const CreatingTireOrder = observer(() => {
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorResponse(messages.join('\n'));
                 setErrorFlag(flag => !flag);
 
             } else {
-                setErrorResponse("Системная ошибка, проверьте правильность " +
-                    "введённой информации и попробуйте еще раз")
+                setErrorResponse("Системная ошибка с созданием заказа. Проверьте правильность введённой информации" +
+                    " и попробуйте еще")
                 setErrorFlag(flag => !flag)
             }
         } finally {
@@ -576,7 +584,7 @@ const CreatingTireOrder = observer(() => {
             <p className="input-style-modified">Страница добавления заказов на шиномонтаж</p>
             <p className="small-input-style">Здесь вы можете сами создать какой-то заказ
                 на шиномонтаж из всех актуальных услуг, а потом получить всю информацию о нём</p>
-            <p className="small-input-style"><strong>Обязательно</strong> выберите все элементы под красным
+            <p className="small-input-style"><strong>Обязательно</strong>: все элементы под красным
                 текстом</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
@@ -808,12 +816,14 @@ const CreatingTireOrder = observer(() => {
                     className="input-style"
                     value={userContacts}
                     onChange={setUserContacts}
+                    maxLength={50}
                 />
                 <InputField
                     label='Номер автомобиля:'
                     id='carNumber'
                     className="input-style"
                     value={carNumber}
+                    maxLength={50}
                     onChange={setCarNumber}
                 />
 
@@ -846,16 +856,18 @@ const CreatingTireOrder = observer(() => {
                     className="input-style"
                     id='specialist'
                     value={specialist}
+                    maxLength={50}
                     onChange={setSpecialist}
                 />
                 <InputField
+                    maxLength={50}
                     label='Администратор:'
                     id='administrator'
                     className="input-style"
                     value={administrator}
                     onChange={setAdministrator}
                 />
-                <InputField
+                <InputFieldPriceTimeNumber
                     label='Количество использованных бонусов:'
                     id='bonuses'
                     className="input-style"
@@ -863,6 +875,7 @@ const CreatingTireOrder = observer(() => {
                     onChange={setBonuses}
                 />
                 <InputField
+                    maxLength={255}
                     label='Комментарии:'
                     id='comments'
                     className="input-style"

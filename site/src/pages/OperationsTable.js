@@ -4,12 +4,20 @@ import {useSortBy, useTable} from 'react-table';
 import {format, parseISO} from 'date-fns';
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {BrowserRouter as Router} from "react-router-dom";
-import {DatePicker, Notification, useToaster} from "rsuite";
+import {DatePicker, InputPicker, Notification, useToaster} from "rsuite";
 import addDays from "date-fns/addDays";
 import {Button} from "react-bootstrap";
 import socketStore from "../store/SocketStore";
 import {observer} from "mobx-react-lite";
-import {getAllOperations, getAllOperationsInOneDay} from "../http/operations";
+import {
+    getAllNamesOperations,
+    getAllOperations,
+    getAllOperationsByOperationName,
+    getAllOperationsByUser,
+    getAllOperationsInOneDay
+} from "../http/operations";
+import {getAllUsers} from "../http/userAPI";
+import operationsNameMapFromEng from "../model/map/OperationsNameMapFromEng";
 
 const columns = [
     {
@@ -28,7 +36,7 @@ const columns = [
         accessor: 'description',
     },
     {
-        Header: 'Дата создания заказа',
+        Header: 'Дата и время операции',
         accessor: 'dateOfCreation',
         Cell: ({value}) => (
             value ? (
@@ -48,12 +56,27 @@ const columns = [
 ];
 
 
+const styles = {
+    width: 500, display: 'block',
+    marginBottom: 10, marginLeft: 'auto', marginRight: 'auto', marginTop: 10
+};
+
 const OperationsTable = observer(() => {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const start = new Date(selectedDate);
     const end = new Date(selectedDate);
+
+    const [userPhones, setUserPhones] = useState([]);
+
+
+    const [operationsName, setOperationsName] = useState([]);
+    const [currentOperation, setCurrentOperation] = useState('');
+
+
+    const [userContacts, setUserContacts] = useState('');
+
 
     const [operations, setOperations] = useState([]);
 
@@ -75,14 +98,14 @@ const OperationsTable = observer(() => {
             setOperations(response)
 
             setSuccessResponse(null)
-            setSuccessResponse("Yes all orders")
+            setSuccessResponse("Все операции успешно получены!")
         } catch (error) {
             if (error.response) {
                 let messages = [];
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorResponse(messages.join('\n'));
                 setErrorFlag(flag => !flag);
 
             } else {
@@ -95,7 +118,7 @@ const OperationsTable = observer(() => {
         }
     };
 
-    const getAllUserOperations = async (event) => {
+    const getAllInAllTimeOperations = async (event) => {
         event.preventDefault();
         if (isSubmitting) {
             return;
@@ -103,6 +126,7 @@ const OperationsTable = observer(() => {
         setIsSubmitting(true);
         try {
             const response = await getAllOperations(start.toISOString(), end.toISOString());
+
             setOperations(response)
 
             setSuccessResponse(null)
@@ -113,7 +137,7 @@ const OperationsTable = observer(() => {
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorResponse(messages.join('\n'));  // Объединяем все сообщения об ошибках через запятую
                 setErrorFlag(flag => !flag);
 
             } else {
@@ -126,6 +150,139 @@ const OperationsTable = observer(() => {
         }
     };
 
+
+    const getAllUserOperations = async (event) => {
+        event.preventDefault();
+        if (userContacts === '' || !userContacts) {
+            setErrorResponse("Пожалуйста, введите телефон пользователя.")
+            setErrorFlag(flag => !flag)
+            return;
+        }
+        if (isSubmitting) {
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const response = await getAllOperationsByUser(userContacts);
+            setOperations(response)
+
+            setSuccessResponse(null)
+            setSuccessResponse("Yes all orders")
+        } catch (error) {
+            if (error.response) {
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join('\n'));  // Объединяем все сообщения об ошибках через запятую
+                setErrorFlag(flag => !flag);
+
+            } else {
+                setErrorResponse("Системная ошибка.\n" +
+                    "Перезагрузите страницу и повторите попытку")
+                setErrorFlag(flag => !flag)
+            }
+        } finally {
+            setIsSubmitting(false)
+        }
+    };
+
+
+    const getAllOperationsByName = async (event) => {
+        event.preventDefault();
+
+        if (currentOperation === '') {
+            setErrorResponse("Пожалуйста, выберите операцию.")
+            setErrorFlag(flag => !flag)
+            return;
+        }
+        if (isSubmitting) {
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const response = await getAllOperationsByOperationName(currentOperation);
+            setOperations(response)
+
+            setSuccessResponse(null)
+            setSuccessResponse("Yes all orders")
+        } catch (error) {
+            if (error.response) {
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join('\n'));  // Объединяем все сообщения об ошибках через запятую
+                setErrorFlag(flag => !flag);
+
+            } else {
+                setErrorResponse("Системная ошибка.\n" +
+                    "Перезагрузите страницу и повторите попытку")
+                setErrorFlag(flag => !flag)
+            }
+        } finally {
+            setIsSubmitting(false)
+        }
+    };
+
+    useEffect(() => {
+        async function getAllPeopleInformation() {
+            try {
+                const response = await getAllUsers();
+
+                const transformedOperations = response.map(name => ({label: name, value: name}));
+                setUserPhones(transformedOperations)
+            } catch (error) {
+                if (error.response) {
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join('\n'));
+                    setErrorFlag(flag => !flag);
+                } else {
+                    setErrorResponse("Системная ошибка, проверьте правильность " +
+                        "введённой информации и попробуйте еще раз")
+                    setErrorFlag(flag => !flag)
+                }
+            }
+        }
+
+        getAllPeopleInformation();
+    }, []);
+
+
+    useEffect(() => {
+        async function getAllOperationNames() {
+            try {
+                const response = await getAllNamesOperations();
+
+                const transformedOperations = response.map(name => {
+                    const translatedName = operationsNameMapFromEng[name] || name; // используйте имя из словаря или оригинальное имя, если перевода нет
+                    return {label: translatedName, value: name};
+                });
+
+                setOperationsName(transformedOperations);
+            } catch (error) {
+                if (error.response) {
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join('\n'));
+                    setErrorFlag(flag => !flag);
+
+                } else {
+                    setErrorResponse("Системная ошибка, проверьте правильность " +
+                        "введённой информации и попробуйте еще раз")
+                    setErrorFlag(flag => !flag)
+                }
+            }
+        }
+
+        getAllOperationNames();
+    }, []);
+
     const successMessage = (
         <Notification
             type="success"
@@ -133,7 +290,7 @@ const OperationsTable = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: 'pre-line'}}>
                 <p>Информация успешно получена из базы данных</p>
             </div>
         </Notification>
@@ -179,7 +336,7 @@ const OperationsTable = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: 'pre-line'}}>
                 {errorResponse}
             </div>
         </Notification>
@@ -274,10 +431,50 @@ const OperationsTable = observer(() => {
                 className='btn-submit'
                 variant='primary'
                 type='submit'
-                onClick={getAllUserOperations}
+                onClick={getAllInAllTimeOperations}
                 disabled={isSubmitting}
                 style={{marginBottom: '20px', marginTop: '20px'}}>
                 {isSubmitting ? 'Поиск заказов...' : 'Получить все операции за всё время'}
+            </Button>
+
+
+            <p className="input-style-modified">Все пользователи приложения</p>
+            <InputPicker
+                data={userPhones}
+                value={userContacts}
+                onChange={setUserContacts}
+                style={{...styles, WebkitTextFillColor: "#000000"}}
+                menuStyle={{fontSize: "17px"}}
+            />
+
+            <Button
+                className='btn-submit'
+                variant='primary'
+                type='submit'
+                onClick={getAllUserOperations}
+                disabled={isSubmitting}
+                style={{marginBottom: '20px', marginTop: '20px'}}>
+                {isSubmitting ? 'Поиск заказов...' : 'Получить все операции по номеру телефона'}
+            </Button>
+
+            <p className="input-style-modified">Все операции пользователей</p>
+
+            <InputPicker
+                data={operationsName}
+                value={currentOperation}
+                onChange={setCurrentOperation}
+                style={{...styles, WebkitTextFillColor: "#000000"}}
+                menuStyle={{fontSize: "17px"}}
+            />
+
+            <Button
+                className='btn-submit'
+                variant='primary'
+                type='submit'
+                onClick={getAllOperationsByName}
+                disabled={isSubmitting}
+                style={{marginBottom: '20px', marginTop: '20px'}}>
+                {isSubmitting ? 'Поиск заказов...' : 'Получить все операции по названию операции'}
             </Button>
 
             <table {...getTableProps()} className="MyTableOperations" style={{marginBottom: '100px'}}>

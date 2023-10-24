@@ -4,7 +4,7 @@ import {InputNumber} from "rsuite";
 const stylesForInput = {
     width: 190, marginBottom: 10, marginTop: 10
 };
-const ModalContent = ({ filterType, handleItemChange, getValueByNameInSelectedItems, allServices }) => {
+const ModalContent = ({filterType, handleItemChange, getValueByNameInSelectedItems, allServices}) => {
     return (
         allServices.filter(item => item.type.includes(filterType)).map(item => (
             <div key={item.name} style={{

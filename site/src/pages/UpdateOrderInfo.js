@@ -4,14 +4,7 @@ import React, {useEffect, useState} from 'react';
 import {Button, Form} from 'react-bootstrap';
 import InputField from "../model/InputField";
 import {BrowserRouter as Router, useParams} from "react-router-dom";
-import {
-    deleteOrderById,
-    getAllPolishingServicesWithPriceAndTime, getAllServicesWithPriceAndTime,
-    getAllTireServicesWithPriceAndTime,
-    getAllWashingServicesWithPriceAndTime,
-    getOrderInfo,
-    updateOrderInfo
-} from "../http/orderAPI";
+import {deleteOrderById, getAllServicesWithPriceAndTime, getOrderInfo, updateOrderInfo} from "../http/orderAPI";
 import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {DatePicker, Divider, InputNumber, InputPicker, Notification, useToaster} from "rsuite";
 import addDays from "date-fns/addDays";
@@ -22,12 +15,11 @@ import socketStore from "../store/SocketStore";
 import {format, parseISO} from "date-fns";
 import currentOrderStatusMapFromEng from "../model/map/CurrentOrderStatusMapFromEng";
 import currentOrderStatusMapFromRus from "../model/map/CurrentOrderStatusMapFromRus";
-import fileNameFromEngMap from "../model/map/FileNamesFromEngMap";
-import {getAllSales} from "../http/userAPI";
 import {carTypesArray, orderStatusArray, serviceTypesArray} from "../model/Constants";
 import MyCustomModal from "../model/MyCustomModal";
 import saleStore from "../store/SaleStore";
 import ModalContent from "../model/ModalContent"
+import InputFieldPriceTimeNumber from "../model/InputFieldPriceTimeNumber";
 
 const wheelSizeArray = [
     'R13', 'R14', 'R15', 'R16', 'R17', 'R18', 'R19', 'R20', 'R21', 'R22'].map(item => ({label: item, value: item}));
@@ -82,7 +74,7 @@ const UpdateOrderInfo = observer(() => {
     const [files, setFiles] = useState([]);
     const [allServices, setAllServices] = useState([]);
 
-    const [errorResponse, setErrorResponse] = useState();
+    const [errorResponse, setErrorResponse] = useState("");
     const [errorFlag, setErrorFlag] = useState(false);
 
     const [successResponse, setSuccessResponse] = useState();
@@ -97,7 +89,6 @@ const UpdateOrderInfo = observer(() => {
     const {id} = useParams();
     const [orderId, setOrderId] = useState('')
 
-    //Работа с акциями
     useEffect(() => {
         if (saleStore?.error) {
             const errorResponseMessage = (
@@ -114,7 +105,7 @@ const UpdateOrderInfo = observer(() => {
             );
 
             toaster.push(errorResponseMessage, {placement: "bottomEnd"});
-            saleStore.error = null; // Очищаем ошибку после показа
+            saleStore.error = null;
         }
     }, [saleStore?.error]);
 
@@ -132,7 +123,6 @@ const UpdateOrderInfo = observer(() => {
             setFiles(saleStore.discounts);
         }
     }, [saleStore.discounts]);
-    //Работа с акциями
 
     const updateSelectedItems = (itemName, updatedData) => {
         setSelectedItems((prevSelectedItems) => {
@@ -172,12 +162,12 @@ const UpdateOrderInfo = observer(() => {
                 // Добавляем новый элемент
                 const newItem = {
                     name: itemName,
-                    priceFirstType : updatedData.priceFirstType,
-                    priceSecondType : updatedData.priceSecondType,
-                    priceThirdType : updatedData.priceThirdType,
-                    timeFirstType : updatedData.timeFirstType,
-                    timeSecondType : updatedData.timeSecondType,
-                    timeThirdType : updatedData.timeThirdType,
+                    priceFirstType: updatedData.priceFirstType,
+                    priceSecondType: updatedData.priceSecondType,
+                    priceThirdType: updatedData.priceThirdType,
+                    timeFirstType: updatedData.timeFirstType,
+                    timeSecondType: updatedData.timeSecondType,
+                    timeThirdType: updatedData.timeThirdType,
                     price_r_13: updatedData.price_r_13,
                     price_r_14: updatedData.price_r_14,
                     price_r_15: updatedData.price_r_15,
@@ -305,7 +295,7 @@ const UpdateOrderInfo = observer(() => {
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorResponse(messages.join('\n'));
                 setErrorFlag(flag => !flag);
 
             } else {
@@ -425,7 +415,7 @@ const UpdateOrderInfo = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 {errorResponse}
             </div>
         </Notification>
@@ -445,7 +435,7 @@ const UpdateOrderInfo = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 <p>{successResponse}</p>
             </div>
         </Notification>
@@ -469,28 +459,26 @@ const UpdateOrderInfo = observer(() => {
                             return acc.concat(names);
                         }, []);
                 };
-
-
                 const filteredAndFormattedItems = prepareSelectedItems(selectedItems);
 
-                console.log(filteredAndFormattedItems)
-                const data = await updateOrderInfo(
-                    orderId, userPhone, russianToEnglishMap[orderType], price, wheelR,
-                    startTime.toISOString(), administrator, autoNumber, carType, specialist,
+                const data = await updateOrderInfo(orderId, userPhone, russianToEnglishMap[orderType],
+                    price, wheelR, startTime.toISOString(), administrator, autoNumber, carType, specialist,
                     boxNumber, bonuses, comments, endTime.toISOString(), filteredAndFormattedItems,
-                    currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription
-                );
+                    currentOrderStatusMapFromRus[currentStatus], selectedSaleDescription);
 
                 setSuccessResponse(data.message);
-
-            } catch
-                (error) {
+            } catch (error) {
                 if (error.response) {
-                    setErrorResponse(error.response.data.message)
-                    setErrorFlag(flag => !flag)
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join('\n'));
+                    setErrorFlag(flag => !flag);
+
                 } else {
-                    setErrorResponse("Системная ошибка, проверьте правильность " +
-                        "введённой информации и попробуйте еще раз")
+                    setErrorResponse("Системная ошибка с загрузкой файлов. " +
+                        "Перезагрузите страницу и попробуйте еще раз")
                     setErrorFlag(flag => !flag)
                 }
             }
@@ -517,14 +505,18 @@ const UpdateOrderInfo = observer(() => {
             try {
                 const data = await deleteOrderById(orderId);
                 setSuccessResponse(data.message)
-            } catch
-                (error) {
+            } catch (error) {
                 if (error.response) {
-                    setErrorResponse(error.response.data.message)
-                    setErrorFlag(flag => !flag)
+                    let messages = [];
+                    for (let key in error.response.data) {
+                        messages.push(error.response.data[key]);
+                    }
+                    setErrorResponse(messages.join('\n'));
+                    setErrorFlag(flag => !flag);
+
                 } else {
-                    setErrorResponse("Системная ошибка с удалением заказа. " +
-                        "Проверьте правильность введённой информации и попробуйте еще раз")
+                    setErrorResponse("Системная ошибка с загрузкой файлов. " +
+                        "Перезагрузите страницу и попробуйте еще раз")
                     setErrorFlag(flag => !flag)
                 }
             }
@@ -563,16 +555,13 @@ const UpdateOrderInfo = observer(() => {
     };
 
 
-
     return (
         <>
             <p className="input-style-modified">Страница изменения информации о заказе</p>
             <p className="small-input-style">Вы можете открыть таблицу с заказами за какой-то день,
                 выбрать там заказ, информацию о котором хотите обновить, а он сам окажется здесь</p>
-
-
             <Form onSubmit={sendUpdateRequest}>
-                <InputField
+                <InputFieldPriceTimeNumber
                     className="input-style"
                     label='Айди заказа'
                     id='orderId'
@@ -589,11 +578,13 @@ const UpdateOrderInfo = observer(() => {
                     <Modal.Body>
                         {orderType.includes("Мойка") && allServices.length > 0 &&
                             <ModalContent filterType="Wash" handleItemChange={handleItemChange}
-                                          getValueByNameInSelectedItems={getValueByNameInSelectedItems} allServices={allServices} />
+                                          getValueByNameInSelectedItems={getValueByNameInSelectedItems}
+                                          allServices={allServices}/>
                         }
                         {orderType.includes("Полировка") && allServices.length > 0 &&
                             <ModalContent filterType="Polish" handleItemChange={handleItemChange}
-                                          getValueByNameInSelectedItems={getValueByNameInSelectedItems} allServices={allServices} />
+                                          getValueByNameInSelectedItems={getValueByNameInSelectedItems}
+                                          allServices={allServices}/>
                         }
                     </Modal.Body>
                     <Modal.Footer>
@@ -607,92 +598,92 @@ const UpdateOrderInfo = observer(() => {
                     <div style={{overflowY: 'auto', maxHeight: '80vh'}}>
                         {orderType.includes("Шиномон") && allServices.length > 0
                             && allServices.filter(item => item.type.includes("Tire")).map((item, index) => (
-                            <div key={index} style={{
-                                fontSize: '16px',
-                                borderBottom: '1px solid lightgray',
-                                paddingBottom: '10px',
-                                paddingTop: '10px',
-                            }}>
-                                <div style={{textAlign: 'center'}}>
-                                    <span>{item.name}</span>
-                                </div>
-                                <div style={{
-                                    display: 'grid',
-                                    gap: '10px',
-                                    alignItems: 'center',
-                                    gridTemplateColumns: 'auto 1fr',
-                                    gridTemplateRows: 'repeat(3, auto)', // Добавляем три строки для Размеров, Времени и Цен
+                                <div key={index} style={{
+                                    fontSize: '16px',
+                                    borderBottom: '1px solid lightgray',
+                                    paddingBottom: '10px',
+                                    paddingTop: '10px',
                                 }}>
-                                    <div style={{color: 'green'}}>Размеры:</div>
-                                    <div style={{
-                                        display: 'grid',
-                                        gap: '10px',
-                                        gridTemplateColumns: 'repeat(10, 1fr)',
-                                        overflowX: 'auto'
-                                    }}>
-                                        <div style={{whiteSpace: 'nowrap'}}>R13</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R14</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R15</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R16</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R17</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R18</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R19</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R20</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R21</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>R22</div>
+                                    <div style={{textAlign: 'center'}}>
+                                        <span>{item.name}</span>
                                     </div>
-                                    <div style={{color: 'blue'}}>Время:</div>
                                     <div style={{
                                         display: 'grid',
                                         gap: '10px',
-                                        gridTemplateColumns: 'repeat(10, 1fr)',
-                                        overflowX: 'auto'
+                                        alignItems: 'center',
+                                        gridTemplateColumns: 'auto 1fr',
+                                        gridTemplateRows: 'repeat(3, auto)', // Добавляем три строки для Размеров, Времени и Цен
                                     }}>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_13}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_14}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_15}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_16}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_17}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_18}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_19}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_20}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_21}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.time_r_22}</div>
+                                        <div style={{color: 'green'}}>Размеры:</div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gap: '10px',
+                                            gridTemplateColumns: 'repeat(10, 1fr)',
+                                            overflowX: 'auto'
+                                        }}>
+                                            <div style={{whiteSpace: 'nowrap'}}>R13</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R14</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R15</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R16</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R17</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R18</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R19</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R20</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R21</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>R22</div>
+                                        </div>
+                                        <div style={{color: 'blue'}}>Время:</div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gap: '10px',
+                                            gridTemplateColumns: 'repeat(10, 1fr)',
+                                            overflowX: 'auto'
+                                        }}>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_13}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_14}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_15}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_16}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_17}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_18}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_19}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_20}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_21}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.time_r_22}</div>
+                                        </div>
+                                        <div style={{color: 'red'}}>Цены:</div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gap: '10px',
+                                            gridTemplateColumns: 'repeat(10, 1fr)',
+                                            overflowX: 'auto'
+                                        }}>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_13}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_14}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_15}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_16}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_17}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_18}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_19}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_20}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_21}</div>
+                                            <div style={{whiteSpace: 'nowrap'}}>{item.price_r_22}</div>
+                                        </div>
                                     </div>
-                                    <div style={{color: 'red'}}>Цены:</div>
                                     <div style={{
-                                        display: 'grid',
-                                        gap: '10px',
-                                        gridTemplateColumns: 'repeat(10, 1fr)',
-                                        overflowX: 'auto'
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        marginTop: '10px',
                                     }}>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_13}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_14}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_15}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_16}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_17}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_18}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_19}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_20}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_21}</div>
-                                        <div style={{whiteSpace: 'nowrap'}}>{item.price_r_22}</div>
+                                        <InputNumber
+                                            size="sm" placeholder="sm"
+                                            style={Object.assign({}, stylesForInput, {margin: '0 auto'})}
+                                            min={0}
+                                            onChange={value => handleItemChange(item.name, value)}
+                                            value={getValueByNameInSelectedItems(item.name) || 0}
+                                        />
                                     </div>
                                 </div>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    marginTop: '10px',
-                                }}>
-                                    <InputNumber
-                                        size="sm" placeholder="sm"
-                                        style={Object.assign({}, stylesForInput, {margin: '0 auto'})}
-                                        min={0}
-                                        onChange={value => handleItemChange(item.name, value)}
-                                        value={getValueByNameInSelectedItems(item.name) || 0}
-                                    />
-                                </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </MyCustomModal>
 
@@ -742,6 +733,7 @@ const UpdateOrderInfo = observer(() => {
                     id='userPhone'
                     value={userPhone}
                     onChange={setUserPhone}
+                    maxLength={50}
                 />
 
                 <p style={{
@@ -755,9 +747,10 @@ const UpdateOrderInfo = observer(() => {
                     onChange={setOrderType}
                     style={{...styles, WebkitTextFillColor: "#000000"}}
                     menuStyle={{fontSize: "17px"}}
+                    maxLength={30}
                 />
 
-                <InputField
+                <InputFieldPriceTimeNumber
                     className="input-style"
                     label='Цена за заказ (целое число)'
                     id='price'
@@ -770,12 +763,14 @@ const UpdateOrderInfo = observer(() => {
                     id='administrator'
                     value={administrator}
                     onChange={setAdministrator}
+                    maxLength={50}
                 />
                 <InputField
                     className="input-style"
                     label='Специалист'
                     id='specialist'
                     value={specialist}
+                    maxLength={50}
                     onChange={setSpecialist}
                 />
                 <p className="input-style">Выберите тип кузова</p>
@@ -810,9 +805,10 @@ const UpdateOrderInfo = observer(() => {
                     label='Номер автомобиля'
                     id='autoNumber'
                     value={autoNumber}
+                    maxLength={50}
                     onChange={setAutoNumber}
                 />
-                <InputField
+                <InputFieldPriceTimeNumber
                     className="input-style"
                     label='Номер бокса'
                     id='boxNumber'
@@ -893,6 +889,7 @@ const UpdateOrderInfo = observer(() => {
                     id='comments'
                     value={comments}
                     onChange={setComments}
+                    maxLength={255}
                 />
                 <p style={{
                     fontWeight: 'bold', display: 'flex',
@@ -921,7 +918,7 @@ const UpdateOrderInfo = observer(() => {
                     }}
                 />
 
-                <InputField
+                <InputFieldPriceTimeNumber
                     className="input-style"
                     label='Использованные клиентом бонусы'
                     id='bonuses'

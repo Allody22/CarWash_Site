@@ -9,12 +9,7 @@ import addDays from 'date-fns/addDays';
 
 import 'rsuite/dist/rsuite.css';
 import InputField from "../model/InputField";
-import {
-    createWashingOrder,
-    getAllWashingServicesWithPriceAndTime,
-    getFreeTime,
-    getPriceAndFreeTime,
-} from "../http/orderAPI";
+import {createWashingOrder, getAllWashingServicesWithPriceAndTime, getFreeTime,} from "../http/orderAPI";
 import socketStore from "../store/SocketStore";
 import {observer} from "mobx-react-lite";
 import {BrowserRouter as Router, useHistory} from "react-router-dom";
@@ -265,13 +260,16 @@ const CreatingWashingOrder = observer(() => {
             }));
 
             setNewTime(newTimeArray);
+
+            const sentence = `Свободное время успешно получено!`;
+            setSuccessResponse(sentence)
         } catch (error) {
             if (error.response) {
                 let messages = [];
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));
+                setErrorResponse(messages.join('\n'));
                 setErrorFlag(flag => !flag);
 
             } else {
@@ -339,9 +337,8 @@ const CreatingWashingOrder = observer(() => {
                     ...item,
                     name: item.name.replace(/_/g, ' ')
                 }));
-                setMainOrders(filteredOrdersMain);
 
-                const filteredOrdersAdditional = response.filter(item => item.role === "additional").map(item => ({
+                const filteredOrdersAdditional = response.filter(item => item.role !== "main").map(item => ({
                     ...item,
                     name: item.name.replace(/_/g, ' ')
                 }));
@@ -354,7 +351,7 @@ const CreatingWashingOrder = observer(() => {
                     for (let key in error.response.data) {
                         messages.push(error.response.data[key]);
                     }
-                    setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                    setErrorResponse(messages.join('\n'));  // Объединяем все сообщения об ошибках через запятую
                     setErrorFlag(flag => !flag);
 
                 } else {
@@ -408,7 +405,7 @@ const CreatingWashingOrder = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: 'pre-line'}}>
                 <p>{successResponse}</p>
             </div>
         </Notification>
@@ -421,7 +418,7 @@ const CreatingWashingOrder = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 {errorResponse}
             </div>
         </Notification>
@@ -442,6 +439,12 @@ const CreatingWashingOrder = observer(() => {
 
     const handleCreateOrder = async (e) => {
         e.preventDefault();
+        if (!requestStartTime || !requestEndTime) {
+            setErrorResponse("Обязательно укажите время начала и время конца заказа")
+            setErrorFlag(flag => !flag)
+            return;
+        }
+
         if (isSubmitting) {
             return;
         }
@@ -449,12 +452,10 @@ const CreatingWashingOrder = observer(() => {
         setSubmitTime(Date.now());
 
         try {
-
             const namesArray = selectedItems.flatMap((item) => {
                 const {name, number} = item;
                 return Array.from({length: number}, () => name);
             });
-
 
             const response = await createWashingOrder(namesArray.map((name) => name.replace(/ /g, '_')),
                 userContacts, requestStartTime.toISOString(), requestEndTime.toISOString(),
@@ -483,11 +484,11 @@ const CreatingWashingOrder = observer(() => {
                 for (let key in error.response.data) {
                     messages.push(error.response.data[key]);
                 }
-                setErrorResponse(messages.join(''));  // Объединяем все сообщения об ошибках через запятую
+                setErrorResponse(messages.join('\n'));
                 setErrorFlag(flag => !flag);
             } else {
-                setErrorResponse("Системная ошибка с получением услуг," +
-                    "введённой информации и попробуйте еще ")
+                setErrorResponse("Системная ошибка с созданием заказа. Проверьте правильность введённой информации" +
+                    " и попробуйте еще ")
                 setErrorFlag(flag => !flag)
             }
         } finally {
@@ -509,7 +510,6 @@ const CreatingWashingOrder = observer(() => {
         if (aStartTime > bStartTime) {
             return 1;
         }
-        // Если время начала интервала одинаково, то сортируем по времени окончания
         const aEndTime = timeStringToMinutes(a.split(' - ')[1]);
         const bEndTime = timeStringToMinutes(b.split(' - ')[1]);
         if (aEndTime < bEndTime) {
@@ -518,7 +518,6 @@ const CreatingWashingOrder = observer(() => {
         if (aEndTime > bEndTime) {
             return 1;
         }
-        // Если интервалы одинаковы, то сортируем по боксу
         return a.localeCompare(b);
     };
 
@@ -542,7 +541,7 @@ const CreatingWashingOrder = observer(() => {
             <p className="input-style-modified">Страница добавления заказов на мойку</p>
             <p className="small-input-style">Здесь вы можете сами создать какой-то заказ мойки на автомойку из всех
                 актуальных услуг, а потом получить всю информацию о нём</p>
-            <p className="small-input-style"><strong>Обязательно</strong> выберите все элементы с красными
+            <p className="small-input-style"><strong>Обязательно</strong>: все элементы с красными
                 под красным текстом</p>
 
             <Button className='full-width' variant='secondary' onClick={handleOpenModal}>
@@ -762,6 +761,7 @@ const CreatingWashingOrder = observer(() => {
                     value={userContacts}
                     className="input-style"
                     onChange={setUserContacts}
+                    maxLength={50}
                 />
                 <InputField
                     label='Номер автомобиля:'
@@ -769,6 +769,7 @@ const CreatingWashingOrder = observer(() => {
                     className="input-style"
                     value={carNumber}
                     onChange={setCarNumber}
+                    maxLength={50}
                 />
                 <p className="important-input-style">Выберите состояние заказа</p>
 
@@ -800,8 +801,10 @@ const CreatingWashingOrder = observer(() => {
                     id='specialist'
                     value={specialist}
                     onChange={setSpecialist}
+                    maxLength={50}
                 />
                 <InputField
+                    maxLength={50}
                     label='Администратор:'
                     id='administrator'
                     className="input-style"
@@ -809,6 +812,7 @@ const CreatingWashingOrder = observer(() => {
                     onChange={setAdministrator}
                 />
                 <InputField
+                    maxLength={50}
                     label='Количество использованных бонусов:'
                     id='bonuses'
                     className="input-style"
@@ -816,6 +820,7 @@ const CreatingWashingOrder = observer(() => {
                     onChange={setBonuses}
                 />
                 <InputField
+                    maxLength={255}
                     label='Комментарии:'
                     id='comments'
                     className="input-style"

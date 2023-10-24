@@ -34,6 +34,7 @@ import orderTypeMap from "../model/map/OrderTypeMapFromEnglish";
 import {format, parseISO} from "date-fns";
 
 const styles = {
+    buttonContainer: {display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px'},
     image: {width: '100px', height: '60px', marginLeft: '15px', marginTop: '20px'},
     verySmallImage: {width: '85px', height: '60px', marginLeft: '30px', marginTop: '20px'},
 };

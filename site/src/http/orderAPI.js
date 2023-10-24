@@ -12,6 +12,11 @@ export const getServiceInfo = async (orderName, orderType) => {
     return await response.data;
 };
 
+export const getAllServicesWithPriceAndTime = async () => {
+    const response = await $authHost.get('/api/orders/management/getAllServicesWithPriceAndTime_v1');
+    return await response.data;
+};
+
 export const deleteOrderById = async (orderId) => {
     const response = await $authHost.post('/api/orders/management/deleteOrder_v1?orderId='
         + encodeURIComponent(orderId));
@@ -20,11 +25,6 @@ export const deleteOrderById = async (orderId) => {
 
 export const getAllWashingServicesWithPriceAndTime = async () => {
     const response = await $authHost.get('/api/orders/management/getAllWashingServicesWithPriceAndTime_v1');
-    return await response.data;
-};
-
-export const getAllServicesWithPriceAndTime = async () => {
-    const response = await $authHost.get('/api/orders/management/getAllServicesWithPriceAndTime_v1');
     return await response.data;
 };
 
@@ -289,7 +289,6 @@ export const getPriceAndFreeTime = async (orders, bodyType, orderType, wheelR, s
         startTime: startTime,
         endTime: endTime
     };
-    console.log(requestBody)
     const response = await $authHost.post('api/orders/management/getPriceAndEndTime_v1', requestBody);
     return response.data;
 };
@@ -301,7 +300,6 @@ export const getFreeTime = async (orderTime, orderType, startTime, endTime) => {
         startTime: startTime,
         endTime: endTime
     };
-    console.log(requestBody)
     const response = await $authHost.post('api/orders/management/getFreeTime_v1', requestBody);
     return response.data;
 };

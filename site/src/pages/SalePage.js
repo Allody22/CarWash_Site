@@ -20,11 +20,11 @@ import saleStore from "../store/SaleStore";
 import {saleDay} from "../model/Constants";
 
 const inputFileStyle = {
-    display: 'block',          // делает input блочным элементом
-    margin: '10px auto',       // добавляет отступы сверху и снизу и выравнивает по центру
-    width: '70%',             // устанавливает ширину элемента
-    padding: '10px',          // добавляет внутренние отступы
-    fontSize: '16px'          // увеличивает размер шрифта (и самого инпута)
+    display: 'block',
+    margin: '10px auto',
+    width: '70%',
+    padding: '10px',
+    fontSize: '16px'
 };
 
 const buttonStyle = {
@@ -35,9 +35,8 @@ const buttonStyle = {
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
-    width: '100%', // Это позволит кнопке занимать всю ширину родительского элемента
-    fontSize: '16px', // Увеличьте размер текста на кнопке
-    // дополнительные стили по вашему усмотрению...
+    width: '100%',
+    fontSize: '16px',
 };
 
 const modalText = {
@@ -58,16 +57,16 @@ const confirmationStyle = {
     color: 'green',
     maxWidth: '100%',
     display: 'flex',
-    justifyContent: 'center', // заменено на camelCase
-    alignItems: 'center',     // заменено на camelCase
-    textAlign: 'center'      // заменено на camelCase
+    justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center'
 };
 
 
 const statusStyle = {
     fontWeight: 'bold',
     fontSize: '18px',
-    marginBottom: '5px', // уменьшил отступ
+    marginBottom: '5px',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -79,16 +78,16 @@ const containerStyle = {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    padding: '5px', // уменьшил padding
-    margin: '5px auto' // уменьшил margin
+    padding: '5px',
+    margin: '5px auto'
 };
 
 const fileBoxStyle = {
     maxWidth: '700px',
-    width: '100%',  // использовать всю доступную ширину до максимума в 700px
+    width: '100%',
     border: '1px solid black',
-    padding: '5px', // уменьшил padding
-    margin: '5px',  // уменьшил margin
+    padding: '5px',
+    margin: '5px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -98,17 +97,17 @@ const fileBoxStyle = {
 };
 
 const imageStyle = {
-    maxWidth: '100%', // изображение будет адаптивным по ширине контейнера
+    maxWidth: '100%',
     maxHeight: '300px',
     height: 'auto',
-    marginBottom: '5px' // уменьшил отступ
+    marginBottom: '5px'
 };
 
 
 const SalePage = observer(() => {
     const toaster = useToaster();
 
-    const [errorResponse, setErrorResponse] = useState();
+    const [errorResponse, setErrorResponse] = useState("");
     const [errorFlag, setErrorFlag] = useState(false);
 
     const [successResponse, setSuccessResponse] = useState();
@@ -131,9 +130,17 @@ const SalePage = observer(() => {
             setFiles(response);
         } catch (error) {
             if (error.response) {
-                alert(error.response.data.message)
+                let messages = [];
+                for (let key in error.response.data) {
+                    messages.push(error.response.data[key]);
+                }
+                setErrorResponse(messages.join('\n'));
+                setErrorFlag(flag => !flag);
+
             } else {
-                alert("Системная ошибка, попробуйте позже")
+                setErrorResponse("Системная ошибка.\n" +
+                    "Перезагрузите страницу и повторите попытку")
+                setErrorFlag(flag => !flag)
             }
         }
     }
@@ -219,21 +226,20 @@ const SalePage = observer(() => {
                 setDescription("")
                 setStatus("")
                 setUploadedFile(null)
-
-                handleRefreshDiscounts()
-                await getAllImages();
+                handleRefreshDiscounts();
+                getAllImages();
             } catch (error) {
                 if (error.response) {
                     let messages = [];
                     for (let key in error.response.data) {
                         messages.push(error.response.data[key]);
                     }
-                    setErrorResponse(messages.join(''));
+                    setErrorResponse(messages.join('\n'));
                     setErrorFlag(flag => !flag);
 
                 } else {
                     setErrorResponse("Системная ошибка с загрузкой файлов. " +
-                        "Перезагрузите страницу и попроуйте еще раз")
+                        "Перезагрузите страницу и попробуйте еще раз")
                     setErrorFlag(flag => !flag)
                 }
             }
@@ -247,7 +253,7 @@ const SalePage = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 {errorResponse}
             </div>
         </Notification>
@@ -267,7 +273,7 @@ const SalePage = observer(() => {
             closable
             style={{border: '1px solid black'}}
         >
-            <div style={{width: 320}}>
+            <div style={{width: 320, whiteSpace: "pre-line"}}>
                 <p>{successResponse}</p>
             </div>
         </Notification>
@@ -317,8 +323,6 @@ const SalePage = observer(() => {
     return (
         <>
             <p className="input-style-modified">Страница акций</p>
-            <p className="small-input-style">Если где-то появляется надпись "Неизвестно",
-                то перезайдите на эту страницу.</p>
             <p className="small-input-style">Вы можете добавить акцию на какой-то определённый день недели
                 или обновить текущую.</p>
             <p className="small-input-style"><strong>Пожалуйста</strong>, внимательно выбирайте картинки
@@ -341,7 +345,7 @@ const SalePage = observer(() => {
                             </p>
 
                             {fileExtension === 'png' || fileExtension === 'jpg' || fileExtension === 'jpeg' ? (
-                                <img src={file.url} alt={file.description} style={imageStyle} loading="lazy"/>
+                                <img src={file.url} alt={file.description} style={imageStyle}/>
                             ) : null}
 
                             <div style={{
@@ -395,6 +399,7 @@ const SalePage = observer(() => {
                             id='description'
                             value={description}
                             onChange={setDescription}
+                            maxLength={255}
                         />
 
                         <input type="file" onChange={handleFileChange} style={inputFileStyle}/>
